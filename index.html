@@ -1,0 +1,1461 @@
+<!-- smart-workplace-mockup.html -->
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Smart Workplace — Mockup (Neumorphism)</title>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ====== Neumorphism variables ====== */
+        :root {
+            --bg: #e7ecf0;
+            --surface: #eef3f6;
+            --text: #2b3942;
+            --muted: #6c7a86;
+            --accent: #6aa6ff;
+            --shadow-light: rgba(255, 255, 255, 0.9);
+            --shadow-dark: rgba(0, 0, 0, 0.12);
+            --radius: 14px;
+            --card-pad: 18px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: linear-gradient(180deg, var(--bg), #edf3f7);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: 28px;
+        }
+
+        /* layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 28px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 18px;
+            box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+            min-height: calc(100vh - 56px - 56px);
+            position: sticky;
+            top: 28px;
+        }
+
+        .logo {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .logo .mark {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #dff1ff, #e9f6ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.08), -6px -6px 14px rgba(255, 255, 255, 0.9);
+            font-weight: 700;
+            color: var(--accent)
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav a {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 10px;
+            border-radius: 12px;
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .nav a.active {
+            background: linear-gradient(180deg, #f7fbff, #eaf6ff);
+            box-shadow: inset 6px 6px 10px rgba(0, 0, 0, 0.04), inset -6px -6px 10px rgba(255, 255, 255, 0.8);
+            color: var(--accent);
+        }
+
+        /* Main area */
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.04), -6px -6px 14px rgba(255, 255, 255, 0.9);
+        }
+
+        input.search-input {
+            border: 0;
+            background: transparent;
+            outline: none;
+            font-size: 15px;
+            color: var(--text);
+            width: 100%;
+        }
+
+        /* Cards grid */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            padding: var(--card-pad);
+            border-radius: 16px;
+            background: var(--surface);
+            box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .room-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%
+        }
+
+        .status-occupied {
+            background: #6aa6ff
+        }
+
+        .status-empty {
+            background: #cfd8e4
+        }
+
+        .sensor-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f7fbff, #eaf6ff);
+            border: 0;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 6px 6px 10px rgba(0, 0, 0, 0.04), -6px -6px 10px rgba(255, 255, 255, 0.9);
+        }
+
+        /* Toggle (neumorphic) */
+        .toggle {
+            --w: 44px;
+            --h: 26px;
+            width: var(--w);
+            height: var(--h);
+            border-radius: 50px;
+            background: var(--surface);
+            padding: 4px;
+            box-shadow: inset 6px 6px 12px rgba(0, 0, 0, 0.06), inset -6px -6px 12px rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #ffffff, #e6eef8);
+            box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.06), -3px -3px 6px rgba(255, 255, 255, 0.7);
+            transform: translateX(0);
+            transition: all 0.2s ease;
+        }
+
+        .toggle.on {
+            justify-content: flex-end
+        }
+
+        .toggle.on .dot {
+            transform: translateX(0)
+        }
+
+        /* Room detail panel */
+        .panel {
+            padding: 18px;
+            border-radius: 16px;
+            background: var(--surface);
+            box-shadow: 8px 8px 20px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 18px
+        }
+
+        .chart-wrap {
+            height: 260px;
+            padding: 8px;
+            background: linear-gradient(#f7fbff, #eef9ff);
+            border-radius: 12px
+        }
+
+        /* Login/Register overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 20, 30, 0.15);
+            backdrop-filter: blur(4px);
+        }
+
+        .auth {
+            width: 380px;
+            padding: 20px;
+            border-radius: 16px;
+            background: var(--surface);
+            box-shadow: 12px 12px 30px rgba(0, 0, 0, 0.12), -12px -12px 30px rgba(255, 255, 255, 0.9);
+        }
+
+        .auth h2 {
+            margin: 0 0 12px 0
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px
+        }
+
+        .form-group input {
+            padding: 10px;
+            border-radius: 10px;
+            border: 0;
+            background: linear-gradient(#f8fbff, #eef7ff);
+            outline: none
+        }
+
+        .link {
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer
+        }
+
+        /* small screens */
+        @media (max-width:920px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 12px
+            }
+
+            .sidebar {
+                position: relative;
+                min-height: auto
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr
+            }
+        }
+
+        footer {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center
+        }
+
+        /* History Tab Styles */
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-time {
+            font-size: 12px;
+            color: var(--muted);
+            min-width: 60px;
+            font-weight: 600;
+        }
+
+        .timeline-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.06), -4px -4px 8px rgba(255, 255, 255, 0.8);
+        }
+
+        .timeline-icon.device {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+
+        .timeline-icon.sensor {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        }
+
+        .timeline-icon.auto {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .timeline-desc {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .stat-card {
+            padding: 12px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f8fafe, #eef6ff);
+            box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.02), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* Settings Tab Styles */
+        .settings-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 0;
+            background: #f6fbff;
+            box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.03), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .settings-input:focus {
+            box-shadow: inset 6px 6px 12px rgba(0, 0, 0, 0.06), inset -6px -6px 12px rgba(255, 255, 255, 0.9);
+        }
+
+        .settings-label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .settings-section {
+            margin-bottom: 18px;
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .warning-box {
+            padding: 12px;
+            border-radius: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            margin-top: 12px;
+        }
+
+        .warning-text {
+            font-size: 13px;
+            color: #856404;
+        }
+
+        /* Filter controls */
+        .filter-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 0;
+            background: #f6fbff;
+            box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.03);
+            outline: none;
+            font-size: 14px;
+        }
+
+        /* Save button special styling */
+        .save-btn {
+            background: linear-gradient(135deg, #6aa6ff, #4a90e2);
+            color: white;
+            font-weight: 700;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 0;
+            cursor: pointer;
+            box-shadow: 6px 6px 14px rgba(106, 166, 255, 0.3), -6px -6px 14px rgba(255, 255, 255, 0.9);
+        }
+
+        .save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 8px 8px 18px rgba(106, 166, 255, 0.4), -8px -8px 18px rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="app">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="mark">SW</div>
+                <div>
+                    <div style="font-weight:800">Smart Workplace</div>
+                    <div style="font-size:13px;color:var(--muted)">Mockup — Neumorphism</div>
+                </div>
+            </div>
+
+            <nav class="nav">
+                <a href="#" class="active" data-view="dashboard">🏠 Dashboard</a>
+                <a href="#" data-view="rooms">📚 Rooms</a>
+                <a href="#" data-view="history">🕘 History</a>
+                <a href="#" data-view="settings">⚙️ Settings</a>
+                <div style="height:14px"></div>
+                <button class="btn" id="open-add-room">＋ Thêm phòng</button>
+            </nav>
+
+            <div style="margin-top:18px;font-size:13px;color:var(--muted)">
+                <div><strong>Connection:</strong> MQTT</div>
+                <div style="margin-top:8px"><strong>Latency target:</strong> &lt; 5s</div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main">
+            <div class="topbar">
+                <div class="search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 21l-4.35-4.35" stroke="#7b8a95" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <input class="search-input" placeholder="Tìm phòng, thiết bị..." />
+                </div>
+                <div style="display:flex;gap:12px;align-items:center">
+                    <div style="text-align:right">
+                        <div style="font-weight:700">Nguyễn A</div>
+                        <div style="font-size:13px;color:var(--muted)">Quản trị viên</div>
+                    </div>
+                    <button class="btn" id="open-login">🔐 Đăng nhập</button>
+                </div>
+            </div>
+
+            <!-- Dashboard view -->
+            <section id="view-dashboard">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h1 style="margin:0">Dashboard</h1>
+                    <div style="color:var(--muted)">Tổng quan các phòng và trạng thái</div>
+                </div>
+
+                <div style="height:12px"></div>
+
+                <div class="cards" id="rooms-list">
+                    <!-- JS will inject room cards -->
+                </div>
+
+                <div class="panel" style="margin-top:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div style="font-weight:700">Hoạt động gần đây</div>
+                            <div style="font-size:13px;color:var(--muted)">Logs & notifications</div>
+                        </div>
+                        <div style="font-size:13px;color:var(--muted)">Last sync: <span id="last-sync">—</span></div>
+                    </div>
+                    <div style="height:10px"></div>
+                    <div id="activity-log" style="max-height:140px;overflow:auto;padding-top:8px;color:var(--muted)">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Room detail view (hidden initially) -->
+            <section id="view-room" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <h2 id="room-name" style="margin:0">Phòng A</h2>
+                        <div style="font-size:13px;color:var(--muted)">ID: <span id="room-id">RM-001</span></div>
+                    </div>
+                    <div style="display:flex;gap:12px;align-items:center">
+                        <div class="status-dot status-occupied" id="room-status"></div>
+                        <button class="btn" id="back-to-dashboard">⤺ Quay về</button>
+                    </div>
+                </div>
+
+                <div style="height:12px"></div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="panel">
+                            <div
+                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                                <div style="font-weight:700">Thông số môi trường</div>
+                                <div style="font-size:13px;color:var(--muted)">Realtime</div>
+                            </div>
+
+                            <div class="chart-wrap">
+                                <canvas id="sensorChart" style="width:100%;height:100%"></canvas>
+                            </div>
+
+                            <div style="height:12px"></div>
+                            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                                <div
+                                    style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(#fbfeff,#eef8ff);box-shadow:inset 4px 4px 8px rgba(0,0,0,0.02)">
+                                    <div style="font-size:12px;color:var(--muted)">Nhiệt độ</div>
+                                    <div style="font-weight:800;font-size:20px" id="temp-value">-- °C</div>
+                                </div>
+                                <div
+                                    style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(#fbfeff,#eef8ff)">
+                                    <div style="font-size:12px;color:var(--muted)">Độ ẩm</div>
+                                    <div style="font-weight:800;font-size:20px" id="hum-value">-- %</div>
+                                </div>
+                                <div
+                                    style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(#fbfeff,#eef8ff)">
+                                    <div style="font-size:12px;color:var(--muted)">Ánh sáng</div>
+                                    <div style="font-weight:800;font-size:20px" id="lux-value">-- lx</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <div style="font-weight:700">Lịch sử hoạt động thiết bị</div>
+                                <div style="font-size:13px;color:var(--muted)">Bật/tắt, thời gian</div>
+                            </div>
+                            <div id="device-history"
+                                style="margin-top:12px;color:var(--muted);max-height:160px;overflow:auto"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="panel">
+                            <div style="font-weight:700">Điều khiển thiết bị</div>
+                            <div style="height:10px"></div>
+
+                            <div style="display:flex;flex-direction:column;gap:10px">
+                                <!-- control rows injected by JS -->
+                                <div class="control-row"
+                                    style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div style="font-weight:700">Đèn chính</div>
+                                        <div style="font-size:13px;color:var(--muted)">Relay lamp 1</div>
+                                    </div>
+                                    <div>
+                                        <div class="toggle" data-device="light-main" id="toggle-light-main">
+                                            <div class="dot"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="control-row"
+                                    style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div style="font-weight:700">Quạt</div>
+                                        <div style="font-size:13px;color:var(--muted)">Fan 12V</div>
+                                    </div>
+                                    <div>
+                                        <div class="toggle on" data-device="fan" id="toggle-fan">
+                                            <div class="dot"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="control-row"
+                                    style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div style="font-weight:700">Máy phun sương</div>
+                                        <div style="font-size:13px;color:var(--muted)">Pump</div>
+                                    </div>
+                                    <div><button class="btn" id="btn-pump-on">Bật ngay</button></div>
+                                </div>
+
+                            </div>
+
+                            <div style="height:12px"></div>
+                            <div style="font-size:13px;color:var(--muted)">
+                                <strong>Chế độ tự động:</strong>
+                                <label style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
+                                    <div class="toggle on" id="auto-mode">
+                                        <div class="dot"></div>
+                                    </div>
+                                    <span style="font-weight:700">Bật</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700">Cấu hình ngưỡng</div>
+                            <div style="height:10px"></div>
+                            <div id="rules-list"></div>
+                            <div style="height:10px"></div>
+                            <div style="display:flex;gap:8px">
+                                <input id="new-rule-input" placeholder="Ví dụ: temp>35 -> fan ON"
+                                    style="flex:1;padding:8px;border-radius:10px;border:0;background:#f6fbff" />
+                                <button class="btn" id="add-rule">Thêm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- History view (hidden initially) -->
+            <section id="view-history" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h1 style="margin:0">Lịch sử hoạt động</h1>
+                    <div style="color:var(--muted)">Theo dõi hoạt động thiết bị và dữ liệu môi trường</div>
+                </div>
+
+                <div style="height:12px"></div>
+
+                <!-- Filter controls -->
+                <div class="panel">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                        <div style="font-weight:700">Bộ lọc:</div>
+                        <select id="history-room-filter"
+                            style="padding:8px;border-radius:10px;border:0;background:#f6fbff">
+                            <option value="all">Tất cả phòng</option>
+                            <option value="RM-001">Phòng A</option>
+                            <option value="RM-002">Phòng B</option>
+                            <option value="RM-003">Phòng C</option>
+                        </select>
+                        <select id="history-type-filter"
+                            style="padding:8px;border-radius:10px;border:0;background:#f6fbff">
+                            <option value="all">Tất cả hoạt động</option>
+                            <option value="device">Thiết bị</option>
+                            <option value="sensor">Cảm biến</option>
+                            <option value="auto">Tự động</option>
+                        </select>
+                        <select id="history-time-filter"
+                            style="padding:8px;border-radius:10px;border:0;background:#f6fbff">
+                            <option value="today">Hôm nay</option>
+                            <option value="week">7 ngày qua</option>
+                            <option value="month">30 ngày qua</option>
+                        </select>
+                        <button class="btn" id="export-history">📊 Xuất báo cáo</button>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Timeline section -->
+                    <div>
+                        <div class="panel">
+                            <div
+                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                                <div style="font-weight:700">Timeline hoạt động</div>
+                                <div style="font-size:13px;color:var(--muted)">Thời gian thực</div>
+                            </div>
+                            <div id="history-timeline" style="max-height:400px;overflow-y:auto">
+                                <!-- Timeline items will be populated by JS -->
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Thống kê thiết bị</div>
+                            <div id="device-stats"
+                                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+                                <!-- Device stats will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts section -->
+                    <div>
+                        <div class="panel">
+                            <div
+                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                                <div style="font-weight:700">Biểu đồ môi trường</div>
+                                <div style="font-size:13px;color:var(--muted)">Xu hướng dữ liệu</div>
+                            </div>
+                            <div class="chart-wrap">
+                                <canvas id="historyChart" style="width:100%;height:200px"></canvas>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Báo cáo năng lượng</div>
+                            <div class="chart-wrap">
+                                <canvas id="energyChart" style="width:100%;height:180px"></canvas>
+                            </div>
+                            <div
+                                style="margin-top:12px;display:flex;justify-content:space-between;font-size:13px;color:var(--muted)">
+                                <div>Tiêu thụ hôm nay: <strong>12.4 kWh</strong></div>
+                                <div>Tiết kiệm: <strong>8.2%</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings view (hidden initially) -->
+            <section id="view-settings" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h1 style="margin:0">Cài đặt hệ thống</h1>
+                    <div style="color:var(--muted)">Cấu hình và tùy chỉnh</div>
+                </div>
+
+                <div style="height:12px"></div>
+
+                <div class="grid-2">
+                    <!-- User Settings -->
+                    <div>
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Thông tin người dùng</div>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <div>
+                                    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Tên
+                                        hiển thị</label>
+                                    <input id="user-name" value="Nguyễn A"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff" />
+                                </div>
+                                <div>
+                                    <label
+                                        style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Email</label>
+                                    <input id="user-email" value="admin@example.com"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff" />
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Vai
+                                        trò</label>
+                                    <select id="user-role"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff">
+                                        <option value="admin">Quản trị viên</option>
+                                        <option value="user">Người dùng</option>
+                                        <option value="guest">Khách</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Tùy chọn giao diện</div>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <div>
+                                        <div>Chế độ tối</div>
+                                        <div style="font-size:13px;color:var(--muted)">Giao diện tối cho mắt</div>
+                                    </div>
+                                    <div class="toggle" id="dark-mode-toggle">
+                                        <div class="dot"></div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <div>
+                                        <div>Thông báo âm thanh</div>
+                                        <div style="font-size:13px;color:var(--muted)">Phát âm báo khi có cảnh báo</div>
+                                    </div>
+                                    <div class="toggle on" id="sound-toggle">
+                                        <div class="dot"></div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <div>
+                                        <div>Tự động làm mới</div>
+                                        <div style="font-size:13px;color:var(--muted)">Cập nhật dữ liệu định kỳ</div>
+                                    </div>
+                                    <div class="toggle on" id="auto-refresh-toggle">
+                                        <div class="dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Settings -->
+                    <div>
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Cấu hình hệ thống</div>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <div>
+                                    <label
+                                        style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">MQTT
+                                        Broker</label>
+                                    <input id="mqtt-broker" value="mqtt://localhost:1883"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff" />
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Tần
+                                        suất cập nhật (giây)</label>
+                                    <input id="update-frequency" type="number" value="5" min="1" max="60"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff" />
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Múi
+                                        giờ</label>
+                                    <select id="timezone"
+                                        style="width:100%;padding:10px;border-radius:10px;border:0;background:#f6fbff">
+                                        <option value="Asia/Ho_Chi_Minh">GMT+7 (Việt Nam)</option>
+                                        <option value="UTC">UTC (Quốc tế)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Quản lý dữ liệu</div>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <div>
+                                        <div>Lưu trữ dữ liệu</div>
+                                        <div style="font-size:13px;color:var(--muted)">Dung lượng đã sử dụng: 42.8 MB
+                                        </div>
+                                    </div>
+                                    <button class="btn" id="clear-data">Xóa dữ liệu cũ</button>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <div>
+                                        <div>Sao lưu tự động</div>
+                                        <div style="font-size:13px;color:var(--muted)">Backup hàng ngày</div>
+                                    </div>
+                                    <div class="toggle on" id="auto-backup-toggle">
+                                        <div class="dot"></div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:8px">
+                                    <button class="btn" id="export-settings">📤 Xuất cấu hình</button>
+                                    <button class="btn" id="import-settings">📥 Nhập cấu hình</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="height:12px"></div>
+
+                        <div class="panel">
+                            <div style="font-weight:700;margin-bottom:12px">Bảo mật</div>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <button class="btn" id="change-password">🔐 Đổi mật khẩu</button>
+                                <button class="btn" id="logout-all">🚪 Đăng xuất tất cả thiết bị</button>
+                                <div
+                                    style="padding:12px;border-radius:10px;background:#fff3cd;border:1px solid #ffeaa7">
+                                    <div style="font-size:13px;color:#856404">
+                                        <strong>Lưu ý:</strong> Thay đổi cấu hình có thể ảnh hưởng đến hoạt động hệ
+                                        thống.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save button -->
+                <div style="margin-top:18px;text-align:right">
+                    <button class="btn" id="save-settings"
+                        style="background:linear-gradient(135deg,#6aa6ff,#4a90e2);color:white;font-weight:700">💾 Lưu
+                        cài đặt</button>
+                </div>
+            </section>
+
+            <footer>Mockup UI — Neumorphism · Demo tương tác (không có backend)</footer>
+        </main>
+    </div>
+
+    <!-- Login/Register overlay (hidden by default) -->
+    <div id="auth-overlay" class="overlay" style="display:none">
+        <div class="auth">
+            <h2 id="auth-title">Đăng nhập</h2>
+            <div class="form-group">
+                <input id="auth-email" type="email" placeholder="Email" />
+                <input id="auth-password" type="password" placeholder="Mật khẩu" />
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <button class="btn" id="auth-action">Đăng nhập</button>
+                <div style="display:flex;flex-direction:column;align-items:flex-end">
+                    <a class="link" id="to-register">Đăng ký</a>
+                    <a class="link" id="to-forgot">Quên mật khẩu?</a>
+                </div>
+            </div>
+            <div style="height:8px"></div>
+            <div id="auth-msg" style="color:crimson;font-size:13px"></div>
+        </div>
+    </div>
+
+    <!-- Simple JS to wire interactions & mock data -->
+    <script>
+        /***** Mock data *****/
+        const rooms = [
+            { id: 'RM-001', name: 'Phòng Thực Hành A', status: 'occupied', temp: 28.2, hum: 52, lux: 320, devices: { 'light-main': true, 'fan': true, 'pump': false }, rules: [{ id: 1, rule: 'temp>35 -> fan ON' }] },
+            { id: 'RM-002', name: 'Phòng Học B', status: 'empty', temp: 25.6, hum: 45, lux: 420, devices: { 'light-main': false, 'fan': false, 'pump': false }, rules: [] },
+            { id: 'RM-003', name: 'Thư Viện', status: 'occupied', temp: 26.1, hum: 48, lux: 180, devices: { 'light-main': true, 'fan': false, 'pump': false }, rules: [] }
+        ];
+        let currentRoom = null;
+
+        /* activity log */
+        const log = [
+            '08:02 — RM-001 — Fan ON (manual)',
+            '08:00 — RM-002 — Light OFF (schedule)',
+            '07:45 — RM-001 — Temp 28.2°C'
+        ];
+
+        const roomsListEl = document.getElementById('rooms-list');
+        const activityEl = document.getElementById('activity-log');
+        const lastSyncEl = document.getElementById('last-sync');
+
+        function formatCard(r) {
+            return `
+        <div class="card" data-room="${r.id}">
+          <div class="room-title">
+            <div>
+              <div style="font-weight:800">${r.name}</div>
+              <div style="font-size:13px;color:var(--muted)">${r.id}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="status-dot ${r.status === 'occupied' ? 'status-occupied' : 'status-empty'}"></div>
+              <div style="font-size:12px;color:var(--muted)">${r.status === 'occupied' ? 'Có người' : 'Trống'}</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="sensor-row"><div>Nhiệt độ</div><div><strong>${r.temp}°C</strong></div></div>
+          <div class="sensor-row"><div>Độ ẩm</div><div><strong>${r.hum}%</strong></div></div>
+          <div class="sensor-row"><div>Ánh sáng</div><div><strong>${r.lux} lx</strong></div></div>
+          <div style="height:8px"></div>
+          <div class="controls">
+            <button class="btn" data-action="view" data-room="${r.id}">Xem</button>
+            <button class="btn" data-action="control" data-room="${r.id}">Điều khiển</button>
+          </div>
+        </div>
+      `;
+        }
+
+        function renderRooms() {
+            roomsListEl.innerHTML = rooms.map(formatCard).join('');
+            // bind view buttons
+            document.querySelectorAll('[data-action="view"]').forEach(b => {
+                b.onclick = () => openRoom(b.dataset.room);
+            });
+            document.querySelectorAll('[data-action="control"]').forEach(b => {
+                b.onclick = () => openRoom(b.dataset.room);
+            });
+        }
+
+        function renderActivity() {
+            activityEl.innerHTML = log.slice().reverse().map(l => `<div style="padding:8px;border-bottom:1px dashed rgba(0,0,0,0.03)">${l}</div>`).join('');
+            lastSyncEl.textContent = new Date().toLocaleTimeString();
+        }
+
+        /* open room */
+        function openRoom(id) {
+            const r = rooms.find(x => x.id === id);
+            if (!r) return alert('Room not found');
+            currentRoom = r;
+            document.getElementById('view-dashboard').style.display = 'none';
+            document.getElementById('view-room').style.display = 'block';
+            document.getElementById('room-name').textContent = r.name;
+            document.getElementById('room-id').textContent = r.id;
+            document.getElementById('room-status').className = 'status-dot ' + (r.status === 'occupied' ? 'status-occupied' : 'status-empty');
+            // sensor values
+            document.getElementById('temp-value').textContent = r.temp + ' °C';
+            document.getElementById('hum-value').textContent = r.hum + ' %';
+            document.getElementById('lux-value').textContent = r.lux + ' lx';
+
+            // device toggles
+            for (const dev in r.devices) {
+                const el = document.querySelector(`[data-device="${dev}"]`);
+                if (el) {
+                    if (r.devices[dev]) el.classList.add('on'); else el.classList.remove('on');
+                }
+            }
+
+            // history
+            const histEl = document.getElementById('device-history');
+            histEl.innerHTML = `<div style="font-size:13px;color:var(--muted">${r.rules.length} rule(s) active</div>` + (log.filter(l => l.includes(r.id)).slice().reverse().map(l => `<div style="padding:8px;border-bottom:1px dashed rgba(0,0,0,0.03)">${l}</div>`).join(''));
+
+            // rules
+            renderRules();
+
+            // build chart
+            buildChart(r);
+        }
+
+        document.getElementById('back-to-dashboard').onclick = () => {
+            document.getElementById('view-room').style.display = 'none';
+            document.getElementById('view-dashboard').style.display = 'block';
+            currentRoom = null;
+        };
+
+        /* toggles */
+        document.addEventListener('click', function (e) {
+            const t = e.target.closest('.toggle');
+            if (t) {
+                t.classList.toggle('on');
+                const dev = t.dataset.device;
+                if (currentRoom && dev) {
+                    currentRoom.devices[dev] = t.classList.contains('on');
+                    const action = currentRoom.devices[dev] ? 'ON' : 'OFF';
+                    log.push(`${new Date().toLocaleTimeString()} — ${currentRoom.id} — ${dev} ${action} (manual)`);
+                    renderActivity();
+                }
+            }
+        });
+
+        /* pump button */
+        document.getElementById('btn-pump-on').onclick = () => {
+            if (!currentRoom) return alert('Chọn phòng trước');
+            currentRoom.devices.pump = true;
+            log.push(`${new Date().toLocaleTimeString()} — ${currentRoom.id} — pump ON (manual)`);
+            renderActivity();
+            // visual feedback
+            const pumpBtn = document.getElementById('btn-pump-on');
+            pumpBtn.textContent = 'Đã bật';
+            setTimeout(() => pumpBtn.textContent = 'Bật ngay', 2000);
+        };
+
+        /* rules */
+        function renderRules() {
+            const el = document.getElementById('rules-list');
+            if (!currentRoom) return;
+            el.innerHTML = currentRoom.rules.map(r => {
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:10px;background:#f6fbff;margin-bottom:8px">
+          <div style="font-size:14px">${r.rule}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="editRule(${r.id})">Sửa</button>
+            <button class="btn" onclick="deleteRule(${r.id})">Xóa</button>
+          </div>
+        </div>`;
+            }).join('');
+        }
+        window.editRule = function (id) {
+            const r = currentRoom.rules.find(x => x.id === id);
+            const val = prompt('Sửa rule:', r.rule);
+            if (val) { r.rule = val; renderRules(); }
+        };
+        window.deleteRule = function (id) {
+            currentRoom.rules = currentRoom.rules.filter(x => x.id !== id);
+            renderRules();
+        };
+        document.getElementById('add-rule').onclick = () => {
+            const v = document.getElementById('new-rule-input').value.trim();
+            if (!v || !currentRoom) return;
+            const id = Date.now();
+            currentRoom.rules.push({ id, rule: v });
+            document.getElementById('new-rule-input').value = '';
+            renderRules();
+            log.push(`${new Date().toLocaleTimeString()} — ${currentRoom.id} — Added rule: ${v}`);
+            renderActivity();
+        };
+
+        /* Auth overlay */
+        const authOverlay = document.getElementById('auth-overlay');
+        const authTitle = document.getElementById('auth-title');
+        const authAction = document.getElementById('auth-action');
+        document.getElementById('open-login').onclick = () => { openAuth('login'); };
+        document.getElementById('to-register').onclick = () => { openAuth('register'); };
+        document.getElementById('to-forgot').onclick = () => { openAuth('forgot'); };
+        function openAuth(mode) {
+            authOverlay.style.display = 'flex';
+            if (mode === 'login') { authTitle.textContent = 'Đăng nhập'; authAction.textContent = 'Đăng nhập'; }
+            if (mode === 'register') { authTitle.textContent = 'Đăng ký'; authAction.textContent = 'Đăng ký'; }
+            if (mode === 'forgot') { authTitle.textContent = 'Quên mật khẩu'; authAction.textContent = 'Gửi email'; }
+        }
+        authOverlay.onclick = function (e) {
+            if (e.target === authOverlay) authOverlay.style.display = 'none';
+        };
+        authAction.onclick = function () {
+            const mode = authTitle.textContent;
+            const email = document.getElementById('auth-email').value.trim();
+            if (!email) { document.getElementById('auth-msg').textContent = 'Nhập email.'; return; }
+            document.getElementById('auth-msg').textContent = '';
+            if (mode === 'Đăng nhập') { authOverlay.style.display = 'none'; alert('Đăng nhập demo thành công'); }
+            else if (mode === 'Đăng ký') { authOverlay.style.display = 'none'; alert('Tài khoản demo đã tạo'); }
+            else { authOverlay.style.display = 'none'; alert('Email đổi mật khẩu đã gửi (demo)'); }
+        };
+
+        /* Add room dialog (simple prompt) */
+        document.getElementById('open-add-room').onclick = () => {
+            const name = prompt('Tên phòng mới:');
+            if (!name) return;
+            const id = 'RM-' + String(Math.floor(Math.random() * 900 + 100));
+            rooms.push({ id, name, status: 'empty', temp: 24, hum: 40, lux: 200, devices: { 'light-main': false, 'fan': false, 'pump': false }, rules: [] });
+            renderRooms(); renderActivity();
+        };
+
+        /* Chart */
+        let chart = null;
+        function buildChart(r) {
+            const ctx = document.getElementById('sensorChart').getContext('2d');
+            const labels = Array.from({ length: 12 }).map((_, i) => `${(new Date(Date.now() - ((11 - i) * 60000))).getMinutes()}m`);
+            const temps = labels.map((_, i) => (r.temp + Math.sin(i / 2) * 0.6).toFixed(1));
+            const hums = labels.map((_, i) => (r.hum + Math.cos(i / 3) * 1.6).toFixed(1));
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Nhiệt độ (°C)', data: temps, fill: false, borderWidth: 2, tension: 0.25, borderColor: '#ff8a65' },
+                        { label: 'Độ ẩm (%)', data: hums, fill: false, borderWidth: 2, tension: 0.25, borderColor: '#5ea6ff' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { display: true, grid: { display: false }, ticks: { color: '#71858a' } },
+                        y: { display: true, grid: { color: 'rgba(0,0,0,0.03)' } }
+                    }
+                }
+            });
+        }
+
+        /* initial render */
+        renderRooms();
+        renderActivity();
+
+        /* view navigation */
+        document.querySelectorAll('.nav a').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+                a.classList.add('active');
+                const view = a.dataset.view;
+
+                // Hide all views first
+                document.getElementById('view-dashboard').style.display = 'none';
+                document.getElementById('view-room').style.display = 'none';
+                document.getElementById('view-history').style.display = 'none';
+                document.getElementById('view-settings').style.display = 'none';
+
+                // Show the selected view
+                if (view === 'dashboard') {
+                    document.getElementById('view-dashboard').style.display = 'block';
+                }
+                else if (view === 'rooms') {
+                    document.getElementById('view-dashboard').style.display = 'block';
+                }
+                else if (view === 'history') {
+                    document.getElementById('view-history').style.display = 'block';
+                    loadHistoryData();
+                }
+                else if (view === 'settings') {
+                    document.getElementById('view-settings').style.display = 'block';
+                    loadSettingsData();
+                }
+            });
+        });
+
+        /* History Tab Functions */
+        function loadHistoryData() {
+            renderHistoryTimeline();
+            renderDeviceStats();
+            renderHistoryCharts();
+            setupHistoryFilters();
+        }
+
+        function renderHistoryTimeline() {
+            const timeline = document.getElementById('history-timeline');
+            const timelineData = [
+                { time: '14:32', type: 'device', icon: '💡', title: 'Đèn phòng A bật', desc: 'Người dùng bật thủ công' },
+                { time: '14:28', type: 'sensor', icon: '🌡️', title: 'Nhiệt độ cao', desc: 'Phòng B: 28.5°C' },
+                { time: '14:25', type: 'auto', icon: '🤖', title: 'Quạt tự động bật', desc: 'Phòng C: Điều kiện nhiệt độ >27°C' },
+                { time: '14:20', type: 'device', icon: '💨', title: 'Máy phun sương tắt', desc: 'Phòng A: Đủ độ ẩm' },
+                { time: '14:15', type: 'sensor', icon: '💧', title: 'Độ ẩm thấp', desc: 'Phòng B: 45%' },
+                { time: '14:10', type: 'auto', icon: '🤖', title: 'Chế độ tiết kiệm năng lượng', desc: 'Tự động giảm công suất 15%' },
+                { time: '14:05', type: 'device', icon: '🔆', title: 'Cảm biến ánh sáng', desc: 'Phòng C: 850 lux' },
+                { time: '14:00', type: 'auto', icon: '🤖', title: 'Báo cáo định kỳ', desc: 'Gửi dữ liệu lên cloud thành công' }
+            ];
+
+            timeline.innerHTML = timelineData.map(item => `
+                <div class="timeline-item">
+                    <div class="timeline-time">${item.time}</div>
+                    <div class="timeline-icon ${item.type}">${item.icon}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">${item.title}</div>
+                        <div class="timeline-desc">${item.desc}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDeviceStats() {
+            const statsContainer = document.getElementById('device-stats');
+            const stats = [
+                { label: 'Đèn bật', value: '12', color: '#6aa6ff' },
+                { label: 'Quạt chạy', value: '8', color: '#4caf50' },
+                { label: 'Cảnh báo', value: '3', color: '#ff9800' },
+                { label: 'Tắt/Lỗi', value: '1', color: '#f44336' }
+            ];
+
+            statsContainer.innerHTML = stats.map(stat => `
+                <div class="stat-card">
+                    <div class="stat-value" style="color:${stat.color}">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderHistoryCharts() {
+            // Environmental history chart
+            const historyCtx = document.getElementById('historyChart').getContext('2d');
+            new Chart(historyCtx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                    datasets: [{
+                        label: 'Nhiệt độ (°C)',
+                        data: [22, 20, 24, 26, 28, 25],
+                        borderColor: '#6aa6ff',
+                        backgroundColor: 'rgba(106, 166, 255, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Độ ẩm (%)',
+                        data: [65, 70, 60, 55, 50, 58],
+                        borderColor: '#4caf50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+            // Energy consumption chart
+            const energyCtx = document.getElementById('energyChart').getContext('2d');
+            new Chart(energyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Phòng A', 'Phòng B', 'Phòng C'],
+                    datasets: [{
+                        label: 'Tiêu thụ (kWh)',
+                        data: [4.2, 3.8, 4.4],
+                        backgroundColor: ['#6aa6ff', '#4caf50', '#ff9800'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupHistoryFilters() {
+            const filters = ['history-room-filter', 'history-type-filter', 'history-time-filter'];
+            filters.forEach(filterId => {
+                document.getElementById(filterId).addEventListener('change', function () {
+                    console.log(`Filter ${filterId} changed to:`, this.value);
+                    renderHistoryTimeline(); // Re-render with filters
+                });
+            });
+
+            document.getElementById('export-history').addEventListener('click', function () {
+                alert('Xuất báo cáo lịch sử (demo) - Sẽ tải file CSV');
+            });
+        }
+
+        /* Settings Tab Functions */
+        function loadSettingsData() {
+            loadUserSettings();
+            setupSettingsHandlers();
+        }
+
+        function loadUserSettings() {
+            // Load saved settings from localStorage
+            const savedSettings = JSON.parse(localStorage.getItem('smartHomeSettings') || '{}');
+
+            if (savedSettings.userName) document.getElementById('user-name').value = savedSettings.userName;
+            if (savedSettings.userEmail) document.getElementById('user-email').value = savedSettings.userEmail;
+            if (savedSettings.userRole) document.getElementById('user-role').value = savedSettings.userRole;
+            if (savedSettings.mqttBroker) document.getElementById('mqtt-broker').value = savedSettings.mqttBroker;
+            if (savedSettings.updateFrequency) document.getElementById('update-frequency').value = savedSettings.updateFrequency;
+            if (savedSettings.timezone) document.getElementById('timezone').value = savedSettings.timezone;
+
+            // Set toggle states
+            if (savedSettings.darkMode) document.getElementById('dark-mode-toggle').classList.toggle('on', savedSettings.darkMode);
+            if (savedSettings.soundEnabled !== undefined) document.getElementById('sound-toggle').classList.toggle('on', savedSettings.soundEnabled);
+            if (savedSettings.autoRefresh !== undefined) document.getElementById('auto-refresh-toggle').classList.toggle('on', savedSettings.autoRefresh);
+            if (savedSettings.autoBackup !== undefined) document.getElementById('auto-backup-toggle').classList.toggle('on', savedSettings.autoBackup);
+        }
+
+        function setupSettingsHandlers() {
+            // Save settings button
+            document.getElementById('save-settings').addEventListener('click', function () {
+                const settings = {
+                    userName: document.getElementById('user-name').value,
+                    userEmail: document.getElementById('user-email').value,
+                    userRole: document.getElementById('user-role').value,
+                    mqttBroker: document.getElementById('mqtt-broker').value,
+                    updateFrequency: document.getElementById('update-frequency').value,
+                    timezone: document.getElementById('timezone').value,
+                    darkMode: document.getElementById('dark-mode-toggle').classList.contains('on'),
+                    soundEnabled: document.getElementById('sound-toggle').classList.contains('on'),
+                    autoRefresh: document.getElementById('auto-refresh-toggle').classList.contains('on'),
+                    autoBackup: document.getElementById('auto-backup-toggle').classList.contains('on')
+                };
+
+                localStorage.setItem('smartHomeSettings', JSON.stringify(settings));
+                alert('Cài đặt đã được lưu thành công!');
+            });
+
+            // Settings action buttons
+            document.getElementById('clear-data').addEventListener('click', function () {
+                if (confirm('Bạn có chắc muốn xóa dữ liệu cũ? Hành động này không thể hoàn tác.')) {
+                    localStorage.removeItem('smartHomeActivityLog');
+                    alert('Đã xóa dữ liệu cũ thành công!');
+                }
+            });
+
+            document.getElementById('export-settings').addEventListener('click', function () {
+                const settings = localStorage.getItem('smartHomeSettings');
+                const blob = new Blob([settings || '{}'], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'smart-home-settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('import-settings').addEventListener('click', function () {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            try {
+                                const settings = JSON.parse(e.target.result);
+                                localStorage.setItem('smartHomeSettings', JSON.stringify(settings));
+                                loadUserSettings();
+                                alert('Cài đặt đã được nhập thành công!');
+                            } catch (error) {
+                                alert('File cài đặt không hợp lệ!');
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            });
+
+            document.getElementById('change-password').addEventListener('click', function () {
+                alert('Chức năng đổi mật khẩu (demo) - Sẽ mở form đổi mật khẩu');
+            });
+
+            document.getElementById('logout-all').addEventListener('click', function () {
+                if (confirm('Đăng xuất tất cả thiết bị? Bạn sẽ cần đăng nhập lại.')) {
+                    alert('Đã đăng xuất tất cả thiết bị (demo)');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
