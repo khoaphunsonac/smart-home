@@ -55,23 +55,28 @@ export default function RegisterPage() {
                 name: formData.name,
                 birthday: formData.birthday,
             });
-            router.push("/dashboard");
+
+            const newUser = {
+                id: `U${Date.now()}`,
+                username: formData.username,
+                password: formData.password,
+                name: formData.name,
+                birthday: formData.birthday,
+            };
+    
+            // Store user and redirect to login
+
+            alert("Đăng ký thành công");
+
+            localStorage.setItem("registeredUser", JSON.stringify(newUser));
+            router.push("/login?registered=true");
+
+            // router.push("/dashboard");
         } catch (error: any) {
             setError(error.message || "Đăng ký thất bại");
         } finally {
             setLoading(false);
         }
-        const newUser = {
-            id: `U${Date.now()}`,
-            username: formData.username,
-            password: formData.password,
-            name: formData.name,
-            birthday: formData.birthday,
-        };
-
-        // Store user and redirect to login
-        localStorage.setItem("registeredUser", JSON.stringify(newUser));
-        router.push("/login?registered=true");
 
         setLoading(false);
     };

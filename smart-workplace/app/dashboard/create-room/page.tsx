@@ -25,7 +25,7 @@ export default function CreateRoomPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser")
+    const currentUser = localStorage.getItem("user")
     if (!currentUser) {
       router.push("/login")
       return

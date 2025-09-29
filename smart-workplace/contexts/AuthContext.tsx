@@ -79,8 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Backend trả về: { success: true, data: { user, token } }
             const responseData = response.data;
-            const newToken = responseData.data?.token;
-            const userData = responseData.data?.user;
+            const newToken = responseData?.token;
+            const userData = responseData?.user;
 
             console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
             console.log("AuthContext: Extracted user:", userData ? userData.username : "Missing");
@@ -122,25 +122,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("Register response:", response.data); // Debug log
 
             // Backend trả về: { success: true, data: { user, token } }
-            const newToken = response.data.data?.token;
-            const newUser = response.data.data?.user;
+            const newToken = response.data?.token;
+            const newUser = response.data?.user;
+
+            console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
+            console.log("AuthContext: Extracted user:", newUser ? newUser.username : "Missing");
 
             if (!newToken || !newUser) {
                 throw new Error("Invalid response from server");
             }
 
-            // Lưu vào state
-            setToken(newToken);
-            setUser(newUser);
+            // // Lưu vào state
+            // setToken(newToken);
+            // setUser(newUser);
 
-            // Lưu vào localStorage (chỉ ở client-side)
-            if (typeof window !== "undefined") {
-                localStorage.setItem("token", newToken);
-                localStorage.setItem("user", JSON.stringify(newUser));
-            }
+            // // Lưu vào localStorage (chỉ ở client-side)
+            // if (typeof window !== "undefined") {
+            //     localStorage.setItem("token", newToken);
+            //     localStorage.setItem("user", JSON.stringify(newUser));
+            // }
         } catch (error: any) {
             console.error("Register error:", error); // Debug log
-            throw new Error(error.response?.data?.message || "Đăng ký thất bại");
+            let errorMessage = error.response?.data?.errors ? error.response?.data?.errors.map((err: any) => err.msg).join(", ") : error.response?.data?.message;
+            alert("Đăng ký thất bại: " + errorMessage);
+            throw new Error(error.response?.data?.error || "Đăng ký thất bại");
         }
     };
 
