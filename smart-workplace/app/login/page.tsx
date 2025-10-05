@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Home, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { testAPI } from "@/lib/test-api";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -26,7 +25,7 @@ export default function LoginPage() {
     // Redirect nếu đã đăng nhập
     useEffect(() => {
         if (!authLoading && user) {
-            router.push("/dashboard");
+            router.replace("/dashboard");
         }
     }, [user, authLoading, router]);
 
@@ -39,8 +38,8 @@ export default function LoginPage() {
 
         try {
             await login(formData);
-            console.log("Login successful, waiting for redirect...");
-            // Không redirect ngay, để AuthContext handle redirect
+            // Redirect ngay sau khi login thành công
+            router.replace("/dashboard");
         } catch (error: any) {
             console.error("Login form error:", error);
             console.error("Error details:", {
@@ -48,16 +47,10 @@ export default function LoginPage() {
                 response: error.response?.data,
                 status: error.response?.status
             });
-            
+
             setError(error.message || "Đăng nhập thất bại");
             setLoading(false);
-            return;
         }
-        
-        // Nếu không có lỗi, đợi một chút để AuthContext cập nhật
-        setTimeout(() => {
-            setLoading(false);
-        }, 1000);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,25 +132,7 @@ export default function LoginPage() {
                             <Button type="submit" className="w-full" disabled={loading}>
                                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                             </Button>
-                            
-                            {/* Debug button */}
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                className="w-full" 
-                                onClick={async () => {
-                                    try {
-                                        const result = await testAPI();
-                                        console.log('Test API result:', result);
-                                        alert('Check console for API result');
-                                    } catch (error) {
-                                        console.error('Test API error:', error);
-                                        alert('API test failed - check console for details');
-                                    }
-                                }}
-                            >
-                                Test API Connection
-                            </Button>
+
                         </form>
 
                         <div className="mt-6 text-center">

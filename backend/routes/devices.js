@@ -1,6 +1,5 @@
 const express = require('express');
-const Device = require('../models/Device');
-const Room = require('../models/Room');
+const { Device, Room } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
 const { validateDeviceCreation, validateId, validatePagination } = require('../middleware/validation');
 
@@ -20,22 +19,35 @@ router.get('/', validatePagination, async (req, res) => {
         const { type, room } = req.query;
 
         // Build filter
-        const filter = {
-            owner: req.user._id,
-            isActive: true
-        };
+        const whereClause = {};
+        
+        if (type) whereClause.type = type;
+        if (room) whereClause.room_id = room;
 
-        if (type) filter.type = type;
-        if (room) filter.room = room;
+        const devices = await Device.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    attributes: ['id', 'name', 'isOccupied'],
+                    where: { user_id: req.user.id }
+                }
+            ],
+            offset: skip,
+            limit: limit
+        });
 
-        const devices = await Device.find(filter)
-            .populate('room', 'name isOccupied')
-            .populate('owner', 'name username')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Device.countDocuments(filter);
+        const total = await Device.count({
+            where: whereClause,
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    where: { user_id: req.user.id }
+                }
+            ]
+        });
 
         res.json({
             success: true,
@@ -58,58 +70,22 @@ router.get('/', validatePagination, async (req, res) => {
     }
 });
 
-// @desc    Get devices by room
-// @route   GET /api/devices/room/:roomId
-// @access  Private
-router.get('/room/:roomId', validateId, async (req, res) => {
-    try {
-        // Verify room ownership
-        const room = await Room.findOne({
-            _id: req.params.roomId,
-            owner: req.user._id,
-            isActive: true
-        });
-
-        if (!room) {
-            return res.status(404).json({
-                success: false,
-                message: 'Room not found'
-            });
-        }
-
-        const devices = await Device.find({
-            room: req.params.roomId,
-            isActive: true
-        })
-            .populate('room', 'name')
-            .sort({ createdAt: -1 });
-
-        res.json({
-            success: true,
-            data: { devices }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get room devices',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
 // @desc    Get device by ID
 // @route   GET /api/devices/:id
 // @access  Private
 router.get('/:id', validateId, async (req, res) => {
     try {
         const device = await Device.findOne({
-            _id: req.params.id,
-            owner: req.user._id,
-            isActive: true
-        })
-            .populate('room', 'name isOccupied')
-            .populate('owner', 'name username');
+            where: { id: req.params.id },
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    attributes: ['id', 'name', 'isOccupied'],
+                    where: { user_id: req.user.id }
+                }
+            ]
+        });
 
         if (!device) {
             return res.status(404).json({
@@ -137,41 +113,39 @@ router.get('/:id', validateId, async (req, res) => {
 // @access  Private
 router.post('/', validateDeviceCreation, async (req, res) => {
     try {
-        const { name, type, brand, model, room, properties } = req.body;
+        const { name, type, room_id } = req.body;
 
-        // Verify room ownership
-        const roomDoc = await Room.findOne({
-            _id: room,
-            owner: req.user._id,
-            isActive: true
+        // Check if room belongs to user
+        const room = await Room.findOne({
+            where: {
+                id: room_id,
+                user_id: req.user.id
+            }
         });
 
-        if (!roomDoc) {
+        if (!room) {
             return res.status(404).json({
                 success: false,
                 message: 'Room not found'
             });
         }
 
-        const device = new Device({
+        const device = await Device.create({
             name,
             type,
-            brand,
-            model,
-            room,
-            owner: req.user._id,
-            ...(properties && { properties })
+            room_id,
+            isOn: false
         });
 
-        await device.save();
-
-        // Add device to room's devices array
-        roomDoc.devices.push(device._id);
-        await roomDoc.save();
-
-        const populatedDevice = await Device.findById(device._id)
-            .populate('room', 'name')
-            .populate('owner', 'name username');
+        const populatedDevice = await Device.findByPk(device.id, {
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    attributes: ['id', 'name', 'isOccupied']
+                }
+            ]
+        });
 
         res.status(201).json({
             success: true,
@@ -188,62 +162,20 @@ router.post('/', validateDeviceCreation, async (req, res) => {
     }
 });
 
-// @desc    Update device
-// @route   PUT /api/devices/:id
-// @access  Private
-router.put('/:id', validateId, async (req, res) => {
-    try {
-        const { name, brand, model, properties, status } = req.body;
-
-        const device = await Device.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                owner: req.user._id,
-                isActive: true
-            },
-            {
-                ...(name && { name }),
-                ...(brand !== undefined && { brand }),
-                ...(model !== undefined && { model }),
-                ...(properties && { properties: { ...device.properties, ...properties } }),
-                ...(status && { status: { ...device.status, ...status } })
-            },
-            { new: true, runValidators: true }
-        )
-            .populate('room', 'name')
-            .populate('owner', 'name username');
-
-        if (!device) {
-            return res.status(404).json({
-                success: false,
-                message: 'Device not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Device updated successfully',
-            data: { device }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update device',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
-// @desc    Toggle device status
+// @desc    Toggle device on/off
 // @route   PUT /api/devices/:id/toggle
 // @access  Private
 router.put('/:id/toggle', validateId, async (req, res) => {
     try {
         const device = await Device.findOne({
-            _id: req.params.id,
-            owner: req.user._id,
-            isActive: true
+            where: { id: req.params.id },
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    where: { user_id: req.user.id }
+                }
+            ]
         });
 
         if (!device) {
@@ -253,184 +185,28 @@ router.put('/:id/toggle', validateId, async (req, res) => {
             });
         }
 
-        if (!device.status.isOnline) {
-            return res.status(400).json({
-                success: false,
-                message: 'Device is offline'
-            });
-        }
+        await device.update({ isOn: !device.isOn });
 
-        device.status.isOn = !device.status.isOn;
-        device.status.lastSeen = new Date();
-        await device.save();
-
-        const populatedDevice = await Device.findById(device._id)
-            .populate('room', 'name');
+        const updatedDevice = await Device.findByPk(device.id, {
+            include: [
+                {
+                    model: Room,
+                    as: 'room',
+                    attributes: ['id', 'name', 'isOccupied']
+                }
+            ]
+        });
 
         res.json({
             success: true,
-            message: `Device ${device.status.isOn ? 'turned on' : 'turned off'} successfully`,
-            data: { device: populatedDevice }
+            message: `Device ${updatedDevice.isOn ? 'turned on' : 'turned off'} successfully`,
+            data: { device: updatedDevice }
         });
 
     } catch (error) {
         res.status(500).json({
             success: false,
             message: 'Failed to toggle device',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
-// @desc    Delete device (soft delete)
-// @route   DELETE /api/devices/:id
-// @access  Private
-router.delete('/:id', validateId, async (req, res) => {
-    try {
-        const device = await Device.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                owner: req.user._id,
-                isActive: true
-            },
-            { isActive: false },
-            { new: true }
-        );
-
-        if (!device) {
-            return res.status(404).json({
-                success: false,
-                message: 'Device not found'
-            });
-        }
-
-        // Remove device from room's devices array
-        await Room.findByIdAndUpdate(
-            device.room,
-            { $pull: { devices: device._id } }
-        );
-
-        res.json({
-            success: true,
-            message: 'Device deleted successfully'
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to delete device',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
-// @desc    Add device schedule
-// @route   POST /api/devices/:id/schedule
-// @access  Private
-router.post('/:id/schedule', validateId, async (req, res) => {
-    try {
-        const { name, time, days, action, value } = req.body;
-
-        if (!name || !time || !days || !action) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, time, days, and action are required'
-            });
-        }
-
-        const device = await Device.findOne({
-            _id: req.params.id,
-            owner: req.user._id,
-            isActive: true
-        });
-
-        if (!device) {
-            return res.status(404).json({
-                success: false,
-                message: 'Device not found'
-            });
-        }
-
-        const newSchedule = {
-            name,
-            time,
-            days,
-            action,
-            ...(value !== undefined && { value })
-        };
-
-        device.schedule.push(newSchedule);
-        await device.save();
-
-        res.status(201).json({
-            success: true,
-            message: 'Schedule added successfully',
-            data: { schedule: newSchedule }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to add schedule',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
-// @desc    Get device statistics
-// @route   GET /api/devices/stats
-// @access  Private
-router.get('/stats', async (req, res) => {
-    try {
-        const stats = await Device.aggregate([
-            { $match: { owner: req.user._id, isActive: true } },
-            {
-                $group: {
-                    _id: null,
-                    totalDevices: { $sum: 1 },
-                    onlineDevices: {
-                        $sum: { $cond: ['$status.isOnline', 1, 0] }
-                    },
-                    activeDevices: {
-                        $sum: { $cond: ['$status.isOn', 1, 0] }
-                    },
-                    totalPowerConsumption: {
-                        $sum: '$powerConsumption.current'
-                    },
-                    devicesByType: {
-                        $push: '$type'
-                    }
-                }
-            }
-        ]);
-
-        const result = stats[0] || {
-            totalDevices: 0,
-            onlineDevices: 0,
-            activeDevices: 0,
-            totalPowerConsumption: 0,
-            devicesByType: []
-        };
-
-        // Count devices by type
-        const deviceTypeCount = result.devicesByType.reduce((acc, type) => {
-            acc[type] = (acc[type] || 0) + 1;
-            return acc;
-        }, {});
-
-        res.json({
-            success: true,
-            data: {
-                ...result,
-                deviceTypeCount,
-                devicesByType: undefined // Remove the array
-            }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get device statistics',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }

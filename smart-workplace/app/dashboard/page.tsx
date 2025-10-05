@@ -45,9 +45,17 @@ export default function DashboardPage() {
         try {
             setLoadingRooms(true);
             const response = await roomsAPI.getRooms();
-            setUserRooms(response.data || []);
+            console.log("Dashboard: API response:", response);
+
+            // Backend trả về: { success: true, data: { rooms: [...], pagination: {...} } }
+            const rooms = response.data?.data?.rooms || response.data?.rooms || [];
+            console.log("Dashboard: Extracted rooms:", rooms);
+
+            setUserRooms(Array.isArray(rooms) ? rooms : []);
         } catch (error: any) {
+            console.error("Dashboard: Load rooms error:", error);
             setError(error.response?.data?.message || "Lỗi khi tải danh sách phòng");
+            setUserRooms([]); // Set empty array on error
         } finally {
             setLoadingRooms(false);
         }
@@ -115,7 +123,7 @@ export default function DashboardPage() {
                             <Home className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-card-foreground">{userRooms.length}</div>
+                            <div className="text-2xl font-bold text-card-foreground">{Array.isArray(userRooms) ? userRooms.length : 0}</div>
                             <p className="text-xs text-muted-foreground">Phòng được quản lý</p>
                         </CardContent>
                     </Card>
@@ -129,7 +137,7 @@ export default function DashboardPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-card-foreground">
-                                {userRooms.filter((room) => room.isOccupied).length}
+                                {Array.isArray(userRooms) ? userRooms.filter((room) => room.isOccupied).length : 0}
                             </div>
                             <p className="text-xs text-muted-foreground">Phòng có người</p>
                         </CardContent>
@@ -146,12 +154,12 @@ export default function DashboardPage() {
                             <div className="text-2xl font-bold text-card-foreground">
                                 {userRooms.length > 0 && userRooms.some((room) => room.temperature?.current)
                                     ? Math.round(
-                                          (userRooms.reduce((total, room) => {
-                                              return total + (room.temperature?.current || 24);
-                                          }, 0) /
-                                              userRooms.length) *
-                                              10
-                                      ) / 10
+                                        (userRooms.reduce((total, room) => {
+                                            return total + (room.temperature?.current || 24);
+                                        }, 0) /
+                                            userRooms.length) *
+                                        10
+                                    ) / 10
                                     : 24}
                                 °C
                             </div>
@@ -169,7 +177,7 @@ export default function DashboardPage() {
                     </Button>
                 </div>
 
-                {userRooms.length === 0 ? (
+                {!Array.isArray(userRooms) || userRooms.length === 0 ? (
                     <Card className="bg-card border-border">
                         <CardContent className="flex flex-col items-center justify-center py-12">
                             <Home className="w-12 h-12 text-muted-foreground mb-4" />
@@ -185,7 +193,7 @@ export default function DashboardPage() {
                     </Card>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {userRooms.map((room) => (
+                        {Array.isArray(userRooms) && userRooms.map((room) => (
                             <Card
                                 key={room.id}
                                 className="bg-card border-border hover:border-primary/50 transition-colors"

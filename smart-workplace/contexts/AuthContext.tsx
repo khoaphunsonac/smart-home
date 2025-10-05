@@ -6,10 +6,8 @@ import { authAPI } from "@/lib/api";
 interface User {
     id: string;
     username: string;
-    email: string;
     name: string;
     birthday?: string;
-    role?: string;
 }
 
 interface AuthContextType {
@@ -19,10 +17,9 @@ interface AuthContextType {
     login: (credentials: { username: string; password: string }) => Promise<void>;
     register: (userData: {
         username: string;
-        email: string;
         password: string;
         name: string;
-        birthday: string;
+        birthday?: string;
     }) => Promise<void>;
     logout: () => void;
     updateProfile: (userData: { name?: string; birthday?: string }) => Promise<void>;
@@ -101,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem("user", JSON.stringify(userData));
                 console.log("AuthContext: Saved to localStorage");
             }
-            
+
             console.log("AuthContext: Login completed successfully");
         } catch (error: any) {
             console.error("AuthContext: Login error:", error);
@@ -112,14 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const register = async (userData: {
         username: string;
-        email: string;
         password: string;
         name: string;
-        birthday: string;
+        birthday?: string;
     }) => {
         try {
             const response = await authAPI.register(userData);
-            console.log("Register response:", response.data); // Debug log
 
             // Backend trả về: { success: true, data: { user, token } }
             const newToken = response.data?.token;
@@ -132,15 +127,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 throw new Error("Invalid response from server");
             }
 
-            // // Lưu vào state
-            // setToken(newToken);
-            // setUser(newUser);
-
-            // // Lưu vào localStorage (chỉ ở client-side)
-            // if (typeof window !== "undefined") {
-            //     localStorage.setItem("token", newToken);
-            //     localStorage.setItem("user", JSON.stringify(newUser));
-            // }
         } catch (error: any) {
             console.error("Register error:", error); // Debug log
             let errorMessage = error.response?.data?.errors ? error.response?.data?.errors.map((err: any) => err.msg).join(", ") : error.response?.data?.message;

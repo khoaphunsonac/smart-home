@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Home, ArrowLeft, Plus, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
+import { roomsAPI } from "@/lib/api"
 
 export default function CreateRoomPage() {
   const router = useRouter()
@@ -25,12 +26,13 @@ export default function CreateRoomPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("user")
-    if (!currentUser) {
+    const token = localStorage.getItem("token")
+    if (!token) {
       router.push("/login")
       return
     }
-    setUser(JSON.parse(currentUser))
+    // Set a dummy user object since we have token
+    setUser({ authenticated: true })
   }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,26 +59,24 @@ export default function CreateRoomPage() {
       return
     }
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Call real API to create room
+      const response = await roomsAPI.createRoom({
+        name: formData.name,
+        adaUsername: formData.adaUsername,
+        adakey: formData.adakey
+      })
 
-    // In a real app, you would send this to your API
-    const newRoom = {
-      id: Date.now(),
-      name: formData.name,
-      isOccupied: false,
-      adaUsername: formData.adaUsername,
-      adakey: formData.adakey,
-      user_id: user.id,
+      if (response.success) {
+        // Redirect back to dashboard with success message
+        router.push("/dashboard?roomCreated=true")
+      } else {
+        setError(response.message || "Có lỗi xảy ra khi tạo phòng")
+      }
+    } catch (error: any) {
+      console.error("Error creating room:", error)
+      setError(error.response?.data?.message || "Có lỗi xảy ra khi tạo phòng")
     }
-
-    // Store room (in real app, this would be saved to database)
-    const existingRooms = JSON.parse(localStorage.getItem("userRooms") || "[]")
-    existingRooms.push(newRoom)
-    localStorage.setItem("userRooms", JSON.stringify(existingRooms))
-
-    // Redirect back to dashboard
-    router.push("/dashboard?roomCreated=true")
 
     setLoading(false)
   }

@@ -8,10 +8,10 @@ const Device = sequelize.define('Device', {
         autoIncrement: true
     },
     name: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: false,
         validate: {
-            len: [1, 50],
+            len: [1, 100],
             notEmpty: true
         },
         set(value) {
@@ -19,161 +19,30 @@ const Device = sequelize.define('Device', {
         }
     },
     type: {
-        type: DataTypes.ENUM(
-            'light',
-            'fan',
-            'air_conditioner',
-            'heater',
-            'speaker',
-            'tv',
-            'camera',
-            'sensor',
-            'switch',
-            'thermostat',
-            'humidifier',
-            'dehumidifier',
-            'other'
-        ),
-        allowNull: false
-    },
-    brand: {
-        type: DataTypes.STRING(30),
-        allowNull: true,
-        set(value) {
-            if (value) this.setDataValue('brand', value.trim());
-        }
-    },
-    model: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        set(value) {
-            if (value) this.setDataValue('model', value.trim());
-        }
-    },
-    roomId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING(100),
         allowNull: false,
-        references: {
-            model: 'rooms',
-            key: 'id'
+        set(value) {
+            this.setDataValue('type', value.trim());
         }
     },
-    ownerId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'users',
-            key: 'id'
-        }
-    },
-    statusIsOnline: {
+    isOn: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false
     },
-    statusIsOn: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false
-    },
-    statusLastSeen: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: false
-    },
-    // Properties stored as JSON
-    brightness: {
+    room_id: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-        validate: {
-            min: 0,
-            max: 100
-        }
-    },
-    color: {
-        type: DataTypes.STRING(7),
-        allowNull: true,
-        validate: {
-            is: /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
-        }
-    },
-    speed: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        validate: {
-            min: 0,
-            max: 100
-        }
-    },
-    temperature: {
-        type: DataTypes.DECIMAL(5, 2),
-        allowNull: true,
-        validate: {
-            min: -50,
-            max: 100
-        }
-    },
-    volume: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        validate: {
-            min: 0,
-            max: 100
-        }
-    },
-    channel: {
-        type: DataTypes.STRING(50),
-        allowNull: true
-    },
-    // Power consumption
-    powerConsumptionCurrent: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
         allowNull: false,
-        validate: {
-            min: 0
+        references: {
+            model: 'room',
+            key: 'id'
         }
-    },
-    powerConsumptionDaily: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
-        allowNull: false,
-        validate: {
-            min: 0
-        }
-    },
-    powerConsumptionMonthly: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
-        allowNull: false,
-        validate: {
-            min: 0
-        }
-    },
-    // Schedule stored as JSON
-    schedule: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: []
-    },
-    isActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false
     }
 }, {
-    tableName: 'devices',
-    indexes: [
-        {
-            fields: ['room_id', 'is_active']
-        },
-        {
-            fields: ['owner_id', 'type']
-        },
-        {
-            fields: ['status_is_online']
-        }
-    ]
+    tableName: 'device',
+    timestamps: false,
+    underscored: false, // Không convert camelCase thành snake_case
+    freezeTableName: true // Không pluralize table name
 });
 
 module.exports = Device;

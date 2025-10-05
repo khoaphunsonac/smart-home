@@ -14,6 +14,9 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const roomRoutes = require('./routes/rooms');
 const deviceRoutes = require('./routes/devices');
+const environmentRoutes = require('./routes/environment');
+const notificationRoutes = require('./routes/notifications');
+const usageHistoryRoutes = require('./routes/usageHistory');
 
 const app = express();
 
@@ -68,6 +71,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/devices', deviceRoutes);
+app.use('/api/environment', environmentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/usage-history', usageHistoryRoutes);
 
 // 404 handler
 app.use(notFound);

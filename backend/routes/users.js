@@ -13,13 +13,10 @@ router.use(authenticateToken);
 // @access  Private
 router.get('/profile', async (req, res) => {
     try {
-        const user = await User.findByPk(req.user.id, {
-            include: [{
-                model: Room,
-                as: 'rooms',
-                attributes: ['id', 'name', 'isOccupied', 'createdAt']
-            }]
-        });
+
+        // Simplified query without includes first
+        const user = await User.findByPk(req.user.id);
+
 
         res.json({
             success: true,
@@ -27,6 +24,8 @@ router.get('/profile', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Profile API Error:', error.message);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Failed to get user profile',

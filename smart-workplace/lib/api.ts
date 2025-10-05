@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig, AxiosError, AxiosHeaders } from "axios";
 
 // Cấu hình base URL cho API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -18,22 +18,27 @@ apiClient.interceptors.request.use(
         if (typeof window !== "undefined") {
             const token = localStorage.getItem("token");
             if (token) {
+                if (!config.headers) {
+                    config.headers = new AxiosHeaders();
+                }
                 config.headers.Authorization = `Bearer ${token}`;
+            } else {
+                console.log("No token found in localStorage");
             }
         }
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         return Promise.reject(error);
     }
 );
 
 // Response interceptor - xử lý lỗi chung
 apiClient.interceptors.response.use(
-    (response) => {
+    (response: any) => {
         return response;
     },
-    (error) => {
+    (error: AxiosError) => {
         if (error.response?.status === 401) {
             // Token hết hạn hoặc không hợp lệ
             if (typeof window !== "undefined") {
@@ -51,10 +56,9 @@ export const authAPI = {
     // Đăng ký
     register: async (userData: {
         username: string;
-        email: string;
         password: string;
         name: string;
-        birthday: string;
+        birthday?: string;
     }) => {
         const response = await apiClient.post("/auth/register", userData);
         return response.data;
@@ -94,7 +98,7 @@ export const roomsAPI = {
     },
 
     // Tạo phòng mới
-    createRoom: async (roomData: { name: string; description?: string; adaUsername?: string }) => {
+    createRoom: async (roomData: { name: string; adaUsername?: string; adakey?: string }) => {
         const response = await apiClient.post("/rooms", roomData);
         return response.data;
     },
@@ -104,9 +108,9 @@ export const roomsAPI = {
         id: string,
         roomData: {
             name?: string;
-            description?: string;
             isOccupied?: boolean;
-            temperature?: { target?: number };
+            adaUsername?: string;
+            adakey?: string;
         }
     ) => {
         const response = await apiClient.put(`/rooms/${id}`, roomData);
@@ -138,10 +142,7 @@ export const devicesAPI = {
     createDevice: async (deviceData: {
         name: string;
         type: string;
-        brand?: string;
-        model?: string;
-        room: string;
-        properties?: Record<string, any>;
+        room_id: number;
     }) => {
         const response = await apiClient.post("/devices", deviceData);
         return response.data;
@@ -152,7 +153,6 @@ export const devicesAPI = {
         id: string,
         deviceData: {
             name?: string;
-            properties?: Record<string, any>;
             isOn?: boolean;
         }
     ) => {
@@ -175,3 +175,84 @@ export const devicesAPI = {
 
 // Export axios instance cho các API tùy chỉnh khác
 export default apiClient;
+
+// Environment API
+export const environmentAPI = {
+    // Lấy dữ liệu môi trường cho một phòng
+    getEnvironmentData: async (roomId: string, params?: { limit?: number }) => {
+        const response = await apiClient.get(`/environment/${roomId}`, { params });
+        return response.data;
+    },
+
+    // Lấy dữ liệu môi trường mới nhất cho một phòng
+    getLatestEnvironmentData: async (roomId: string) => {
+        const response = await apiClient.get(`/environment/${roomId}/latest`);
+        return response.data;
+    },
+
+    // Tạo dữ liệu môi trường mới
+    createEnvironmentData: async (roomId: string, data: {
+        temperature?: number;
+        humidity?: number;
+        lightLevel?: number;
+    }) => {
+        const response = await apiClient.post(`/environment/${roomId}`, data);
+        return response.data;
+    }
+};
+
+// Notifications API
+export const notificationsAPI = {
+    // Lấy danh sách thông báo
+    getNotifications: async (params?: { page?: number; limit?: number }) => {
+        const response = await apiClient.get("/notifications", { params });
+        return response.data;
+    },
+
+    // Đánh dấu thông báo đã đọc
+    markAsRead: async (id: string) => {
+        const response = await apiClient.put(`/notifications/${id}/read`);
+        return response.data;
+    },
+
+    // Tạo thông báo mới
+    createNotification: async (data: {
+        title: string;
+        message: string;
+        type?: string;
+    }) => {
+        const response = await apiClient.post("/notifications", data);
+        return response.data;
+    }
+};
+
+// Usage History API
+export const usageHistoryAPI = {
+    // Lấy lịch sử sử dụng
+    getUsageHistory: async (params?: {
+        page?: number;
+        limit?: number;
+        room_id?: string;
+        device_type?: string;
+    }) => {
+        const response = await apiClient.get("/usage-history", { params });
+        return response.data;
+    },
+
+    // Lấy thống kê sử dụng
+    getUsageStats: async (params?: { period?: string }) => {
+        const response = await apiClient.get("/usage-history/stats", { params });
+        return response.data;
+    },
+
+    // Tạo bản ghi lịch sử sử dụng mới
+    createUsageHistory: async (data: {
+        room_id: number;
+        deviceType: string;
+        duration: number;
+        energyConsumed?: number;
+    }) => {
+        const response = await apiClient.post("/usage-history", data);
+        return response.data;
+    }
+};

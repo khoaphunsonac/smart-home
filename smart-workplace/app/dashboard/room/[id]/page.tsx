@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { ArrowLeft, Thermometer, Droplets, Sun, Lightbulb, Wind, Tv, Snowflake, Settings, Activity } from "lucide-react"
-import mockData from "@/data/mockData.json"
+import { roomsAPI, devicesAPI, environmentAPI } from "@/lib/api"
 
 export default function RoomDetailsPage() {
   const router = useRouter()
@@ -22,44 +22,85 @@ export default function RoomDetailsPage() {
   const [deviceStates, setDeviceStates] = useState<{ [key: number]: boolean }>({})
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser")
-    if (!currentUser) {
+    const token = localStorage.getItem("token")
+    if (!token) {
       router.push("/login")
       return
     }
 
-    const userData = JSON.parse(currentUser)
-    setUser(userData)
+    const loadRoomData = async () => {
+      try {
+        // Get room data with devices
+        const roomResponse = await roomsAPI.getRoom(roomId.toString())
+        if (!roomResponse.success) {
+          router.push("/dashboard")
+          return
+        }
 
-    // Get room data
-    const roomData = mockData.rooms.find((r) => r.id === roomId && r.user_id === userData.id)
-    if (!roomData) {
-      router.push("/dashboard")
-      return
+        const roomData = roomResponse.data.room
+        setRoom(roomData)
+
+        // Set devices from room data (if included) or fetch separately
+        if (roomData.devices && Array.isArray(roomData.devices)) {
+          setDevices(roomData.devices)
+
+          // Initialize device states
+          const initialStates: { [key: number]: boolean } = {}
+          roomData.devices.forEach((device: any) => {
+            initialStates[device.id] = device.isOn
+          })
+          setDeviceStates(initialStates)
+        } else {
+          // Fetch devices separately if not included
+          const devicesResponse = await devicesAPI.getDevices({ room: roomId.toString() })
+          if (devicesResponse.success && Array.isArray(devicesResponse.data.devices)) {
+            setDevices(devicesResponse.data.devices)
+
+            // Initialize device states
+            const initialStates: { [key: number]: boolean } = {}
+            devicesResponse.data.devices.forEach((device: any) => {
+              initialStates[device.id] = device.isOn
+            })
+            setDeviceStates(initialStates)
+          }
+        }
+
+        // Get environment data
+        try {
+          const envResponse = await environmentAPI.getLatestEnvironmentData(roomId.toString())
+          if (envResponse.success) {
+            setEnvironmentData(envResponse.data.environmentData)
+          }
+        } catch (envError) {
+          console.log("No environment data available for this room")
+        }
+
+      } catch (error) {
+        console.error("Error loading room data:", error)
+        router.push("/dashboard")
+      }
     }
-    setRoom(roomData)
 
-    // Get devices for this room
-    const roomDevices = mockData.devices.filter((device) => device.room_id === roomId)
-    setDevices(roomDevices)
-
-    // Initialize device states
-    const initialStates: { [key: number]: boolean } = {}
-    roomDevices.forEach((device) => {
-      initialStates[device.id] = device.isOn
-    })
-    setDeviceStates(initialStates)
-
-    // Get environment data
-    const envData = mockData.environmentData.find((data) => data.room_id === roomId)
-    setEnvironmentData(envData)
+    loadRoomData()
   }, [router, roomId])
 
-  const toggleDevice = (deviceId: number) => {
-    setDeviceStates((prev) => ({
-      ...prev,
-      [deviceId]: !prev[deviceId],
-    }))
+  const toggleDevice = async (deviceId: number) => {
+    try {
+      const response = await devicesAPI.toggleDevice(deviceId.toString())
+      if (response.success) {
+        setDeviceStates((prev) => ({
+          ...prev,
+          [deviceId]: !prev[deviceId],
+        }))
+      }
+    } catch (error) {
+      console.error("Error toggling device:", error)
+      // Fallback to local state update if API fails
+      setDeviceStates((prev) => ({
+        ...prev,
+        [deviceId]: !prev[deviceId],
+      }))
+    }
   }
 
   const getDeviceIcon = (type: string) => {
@@ -77,7 +118,7 @@ export default function RoomDetailsPage() {
     }
   }
 
-  if (!user || !room) {
+  if (!room) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
