@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Home, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { testAPI, testCORS } from "@/lib/test-api";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -45,7 +46,7 @@ export default function LoginPage() {
             console.error("Error details:", {
                 message: error.message,
                 response: error.response?.data,
-                status: error.response?.status
+                status: error.response?.status,
             });
 
             setError(error.message || "Đăng nhập thất bại");
@@ -133,6 +134,45 @@ export default function LoginPage() {
                                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                             </Button>
 
+                            {/* Debug buttons */}
+                            <div className="space-y-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={async () => {
+                                        try {
+                                            console.log("Testing CORS...");
+                                            const corsResult = await testCORS();
+                                            console.log("CORS test result:", corsResult);
+
+                                            console.log("Testing API...");
+                                            const result = await testAPI();
+                                            console.log("API test result:", result);
+                                            alert("API tests completed - check console for details");
+                                        } catch (error) {
+                                            console.error("Tests failed:", error);
+                                            alert("Tests failed - check console for details");
+                                        }
+                                    }}
+                                >
+                                    🧪 Test API & CORS
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="w-full"
+                                    onClick={() => {
+                                        setFormData({
+                                            username: "khoatrandang020704",
+                                            password: "test123T",
+                                        });
+                                    }}
+                                >
+                                    📝 Fill Demo Credentials
+                                </Button>
+                            </div>
                         </form>
 
                         <div className="mt-6 text-center">

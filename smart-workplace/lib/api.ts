@@ -56,18 +56,33 @@ export const authAPI = {
     // Đăng ký
     register: async (userData: {
         username: string;
+        email: string;
         password: string;
         name: string;
         birthday?: string;
     }) => {
-        const response = await apiClient.post("/auth/register", userData);
-        return response.data;
+        try {
+            const response = await apiClient.post("/auth/register", userData);
+            console.log("Register API response:", response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error("Register API error:", error.response?.data || error.message);
+            throw error;
+        }
     },
 
     // Đăng nhập
     login: async (credentials: { username: string; password: string }) => {
-        const response = await apiClient.post("/auth/login", credentials);
-        return response.data;
+        try {
+            console.log("Login API call with baseURL:", apiClient.defaults.baseURL);
+            const response = await apiClient.post("/auth/login", credentials);
+            console.log("Login API response:", response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error("Login API error:", error.response?.data || error.message);
+            console.error("Full error:", error);
+            throw error;
+        }
     },
 
     // Lấy thông tin profile
@@ -139,11 +154,7 @@ export const devicesAPI = {
     },
 
     // Tạo thiết bị mới
-    createDevice: async (deviceData: {
-        name: string;
-        type: string;
-        room_id: number;
-    }) => {
+    createDevice: async (deviceData: { name: string; type: string; room_id: number }) => {
         const response = await apiClient.post("/devices", deviceData);
         return response.data;
     },
@@ -191,14 +202,17 @@ export const environmentAPI = {
     },
 
     // Tạo dữ liệu môi trường mới
-    createEnvironmentData: async (roomId: string, data: {
-        temperature?: number;
-        humidity?: number;
-        lightLevel?: number;
-    }) => {
+    createEnvironmentData: async (
+        roomId: string,
+        data: {
+            temperature?: number;
+            humidity?: number;
+            lightLevel?: number;
+        }
+    ) => {
         const response = await apiClient.post(`/environment/${roomId}`, data);
         return response.data;
-    }
+    },
 };
 
 // Notifications API
@@ -216,25 +230,16 @@ export const notificationsAPI = {
     },
 
     // Tạo thông báo mới
-    createNotification: async (data: {
-        title: string;
-        message: string;
-        type?: string;
-    }) => {
+    createNotification: async (data: { title: string; message: string; type?: string }) => {
         const response = await apiClient.post("/notifications", data);
         return response.data;
-    }
+    },
 };
 
 // Usage History API
 export const usageHistoryAPI = {
     // Lấy lịch sử sử dụng
-    getUsageHistory: async (params?: {
-        page?: number;
-        limit?: number;
-        room_id?: string;
-        device_type?: string;
-    }) => {
+    getUsageHistory: async (params?: { page?: number; limit?: number; room_id?: string; device_type?: string }) => {
         const response = await apiClient.get("/usage-history", { params });
         return response.data;
     },
@@ -254,5 +259,5 @@ export const usageHistoryAPI = {
     }) => {
         const response = await apiClient.post("/usage-history", data);
         return response.data;
-    }
+    },
 };

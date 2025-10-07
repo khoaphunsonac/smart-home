@@ -6,8 +6,10 @@ import { authAPI } from "@/lib/api";
 interface User {
     id: string;
     username: string;
+    email: string;
     name: string;
     birthday?: string;
+    role?: string;
 }
 
 interface AuthContextType {
@@ -17,6 +19,7 @@ interface AuthContextType {
     login: (credentials: { username: string; password: string }) => Promise<void>;
     register: (userData: {
         username: string;
+        email: string;
         password: string;
         name: string;
         birthday?: string;
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const register = async (userData: {
         username: string;
+        email: string;
         password: string;
         name: string;
         birthday?: string;
@@ -126,10 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!newToken || !newUser) {
                 throw new Error("Invalid response from server");
             }
-
         } catch (error: any) {
             console.error("Register error:", error); // Debug log
-            let errorMessage = error.response?.data?.errors ? error.response?.data?.errors.map((err: any) => err.msg).join(", ") : error.response?.data?.message;
+            let errorMessage = error.response?.data?.errors
+                ? error.response?.data?.errors.map((err: any) => err.msg).join(", ")
+                : error.response?.data?.message;
             alert("Đăng ký thất bại: " + errorMessage);
             throw new Error(error.response?.data?.error || "Đăng ký thất bại");
         }
