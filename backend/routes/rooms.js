@@ -17,32 +17,18 @@ router.get('/', validatePagination, async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
+        // Simplified query first to debug
         const rooms = await Room.findAll({
             where: {
-                ownerId: req.user.id,
-                isActive: true
+                user_id: req.user.id
             },
-            include: [
-                {
-                    model: Device,
-                    as: 'devices',
-                    attributes: ['id', 'name', 'type', 'statusIsOn', 'statusIsOnline']
-                },
-                {
-                    model: User,
-                    as: 'owner',
-                    attributes: ['id', 'name', 'username']
-                }
-            ],
-            order: [['createdAt', 'DESC']],
             offset: skip,
             limit: limit
         });
 
         const total = await Room.count({
             where: {
-                ownerId: req.user.id,
-                isActive: true
+                user_id: req.user.id
             }
         });
 
@@ -59,6 +45,8 @@ router.get('/', validatePagination, async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Rooms API Error:', error.message);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Failed to get rooms',
@@ -75,8 +63,7 @@ router.get('/:id', validateId, async (req, res) => {
         const room = await Room.findOne({
             where: {
                 id: req.params.id,
-                ownerId: req.user.id,
-                isActive: true
+                user_id: req.user.id
             },
             include: [
                 {
@@ -117,34 +104,15 @@ router.get('/:id', validateId, async (req, res) => {
 // @access  Private
 router.post('/', validateRoomCreation, async (req, res) => {
     try {
-        const { name, description, adaUsername, temperature, humidity, lighting } = req.body;
+        const { name, adaUsername, adakey } = req.body;
 
         const roomData = {
             name,
-            description,
             adaUsername,
-            ownerId: req.user.id
+            adakey,
+            user_id: req.user.id,
+            isOccupied: false
         };
-
-        // Handle temperature data
-        if (temperature) {
-            if (temperature.target !== undefined) roomData.temperatureTarget = temperature.target;
-            if (temperature.current !== undefined) roomData.temperatureCurrent = temperature.current;
-            if (temperature.unit !== undefined) roomData.temperatureUnit = temperature.unit;
-        }
-
-        // Handle humidity data
-        if (humidity) {
-            if (humidity.target !== undefined) roomData.humidityTarget = humidity.target;
-            if (humidity.current !== undefined) roomData.humidityCurrent = humidity.current;
-        }
-
-        // Handle lighting data
-        if (lighting) {
-            if (lighting.isOn !== undefined) roomData.lightingIsOn = lighting.isOn;
-            if (lighting.brightness !== undefined) roomData.lightingBrightness = lighting.brightness;
-            if (lighting.color !== undefined) roomData.lightingColor = lighting.color;
-        }
 
         const room = await Room.create(roomData);
 
@@ -176,34 +144,43 @@ router.post('/', validateRoomCreation, async (req, res) => {
 // @access  Private
 router.put('/:id', validateRoomUpdate, async (req, res) => {
     try {
-        const { name, description, isOccupied, adaUsername, temperature, humidity, lighting } = req.body;
+        const { name, isOccupied, adaUsername, adakey } = req.body;
 
-        const room = await Room.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                owner: req.user._id,
-                isActive: true
-            },
+        const [updatedRowsCount] = await Room.update(
             {
                 ...(name && { name }),
-                ...(description !== undefined && { description }),
                 ...(isOccupied !== undefined && { isOccupied }),
                 ...(adaUsername !== undefined && { adaUsername }),
-                ...(temperature && { temperature: { ...temperature } }),
-                ...(humidity && { humidity: { ...humidity } }),
-                ...(lighting && { lighting: { ...lighting } })
+                ...(adakey !== undefined && { adakey })
             },
-            { new: true, runValidators: true }
-        )
-            .populate('devices')
-            .populate('owner', 'name username');
+            {
+                where: {
+                    id: req.params.id,
+                    user_id: req.user.id
+                }
+            }
+        );
 
-        if (!room) {
+        if (updatedRowsCount === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Room not found'
             });
         }
+
+        const room = await Room.findByPk(req.params.id, {
+            include: [
+                {
+                    model: Device,
+                    as: 'devices'
+                },
+                {
+                    model: User,
+                    as: 'owner',
+                    attributes: ['id', 'name', 'username']
+                }
+            ]
+        });
 
         res.json({
             success: true,
@@ -225,28 +202,24 @@ router.put('/:id', validateRoomUpdate, async (req, res) => {
 // @access  Private
 router.delete('/:id', validateId, async (req, res) => {
     try {
-        const room = await Room.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                owner: req.user._id,
-                isActive: true
-            },
-            { isActive: false },
-            { new: true }
-        );
+        const deletedRowsCount = await Room.destroy({
+            where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }
+        });
 
-        if (!room) {
+        if (deletedRowsCount === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Room not found'
             });
         }
 
-        // Also deactivate all devices in the room
-        await Device.updateMany(
-            { room: req.params.id },
-            { isActive: false }
-        );
+        // Also delete all devices in the room
+        await Device.destroy({
+            where: { room_id: req.params.id }
+        });
 
         res.json({
             success: true,

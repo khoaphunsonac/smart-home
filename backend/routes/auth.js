@@ -11,27 +11,28 @@ const router = express.Router();
 // @access  Public
 router.post('/register', validateUserRegistration, async (req, res) => {
     try {
-        const { username, email, password, name, birthday } = req.body;
+        const { username, password, name, birthday } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({
-            where: {
-                [Op.or]: [{ email }, { username }]
-            }
+            where: { username }
         });
 
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: existingUser.email === email ? 'Email already registered' : 'Username already taken'
+                message: 'Username already taken'
             });
         }
 
+        // Generate unique user ID
+        const userId = 'U' + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase();
+
         // Create new user
         const user = await User.create({
+            id: userId,
             username,
-            email,
-            password,
+            pass: password,
             name,
             birthday
         });
@@ -68,15 +69,11 @@ router.post('/login', validateUserLogin, async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // Find user by username or email
+        // Find user by username
         const user = await User.findOne({
-            where: {
-                [Op.or]: [
-                    { username: username.toLowerCase() },
-                    { email: username.toLowerCase() }
-                ]
-            }
+            where: { username: username.toLowerCase() }
         });
+
 
         if (!user) {
             return res.status(401).json({
@@ -85,16 +82,16 @@ router.post('/login', validateUserLogin, async (req, res) => {
             });
         }
 
-        // Check if user is active
-        if (!user.isActive) {
-            return res.status(403).json({
-                success: false,
-                message: 'Account is deactivated'
-            });
+        // Verify password - temporary direct comparison for unhashed passwords
+        let isPasswordValid;
+        if (user.pass.startsWith('$2')) {
+            // Password is hashed
+            isPasswordValid = await user.comparePassword(password);
+        } else {
+            // Password is not hashed (direct comparison)
+            isPasswordValid = user.pass === password;
         }
 
-        // Verify password
-        const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,

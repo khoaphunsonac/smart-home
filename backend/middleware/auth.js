@@ -6,6 +6,7 @@ const authenticateToken = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -14,19 +15,13 @@ const authenticateToken = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
         const user = await User.findByPk(decoded.userId);
 
         if (!user) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid token - user not found'
-            });
-        }
-
-        if (!user.isActive) {
-            return res.status(403).json({
-                success: false,
-                message: 'Account is deactivated'
             });
         }
 

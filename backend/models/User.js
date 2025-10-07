@@ -4,36 +4,23 @@ const { sequelize } = require('../config/database');
 
 const User = sequelize.define('User', {
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING(50),
         primaryKey: true,
-        autoIncrement: true
+        allowNull: false
     },
     username: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
         validate: {
-            len: [3, 20],
-            notEmpty: true,
-            isAlphanumeric: true
+            len: [3, 100],
+            notEmpty: true
         },
         set(value) {
             this.setDataValue('username', value.toLowerCase().trim());
         }
     },
-    email: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true,
-        validate: {
-            isEmail: true,
-            notEmpty: true
-        },
-        set(value) {
-            this.setDataValue('email', value.toLowerCase().trim());
-        }
-    },
-    password: {
+    pass: {
         type: DataTypes.STRING(255),
         allowNull: false,
         validate: {
@@ -42,10 +29,10 @@ const User = sequelize.define('User', {
         }
     },
     name: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: false,
         validate: {
-            len: [2, 50],
+            len: [2, 100],
             notEmpty: true
         },
         set(value) {
@@ -54,37 +41,21 @@ const User = sequelize.define('User', {
     },
     birthday: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
+        allowNull: true,
         validate: {
-            isDate: true,
-            notEmpty: true
+            isDate: true
         }
-    },
-    avatar: {
-        type: DataTypes.STRING(255),
-        allowNull: true
-    },
-    role: {
-        type: DataTypes.ENUM('user', 'admin'),
-        defaultValue: 'user',
-        allowNull: false
-    },
-    isActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false
-    },
-    lastLogin: {
-        type: DataTypes.DATE,
-        allowNull: true
     }
 }, {
-    tableName: 'users',
+    tableName: 'user',
+    timestamps: false,
+    underscored: false, // Không convert camelCase thành snake_case
+    freezeTableName: true, // Không pluralize table name
     hooks: {
         beforeSave: async (user) => {
-            if (user.changed('password')) {
+            if (user.changed('pass')) {
                 const salt = await bcrypt.genSalt(12);
-                user.password = await bcrypt.hash(user.password, salt);
+                user.pass = await bcrypt.hash(user.pass, salt);
             }
         }
     }
@@ -92,12 +63,12 @@ const User = sequelize.define('User', {
 
 // Instance methods
 User.prototype.comparePassword = async function (candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
+    return bcrypt.compare(candidatePassword, this.pass);
 };
 
 User.prototype.toJSON = function () {
     const values = { ...this.get() };
-    delete values.password;
+    delete values.pass;
     return values;
 };
 

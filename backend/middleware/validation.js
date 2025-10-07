@@ -17,29 +17,20 @@ const handleValidationErrors = (req, res, next) => {
 const validateUserRegistration = [
     body('username')
         .trim()
-        .isLength({ min: 3, max: 20 })
-        .withMessage('Username must be between 3-20 characters')
-        .matches(/^[a-zA-Z0-9_]+$/)
-        .withMessage('Username can only contain letters, numbers, and underscores'),
-
-    body('email')
-        .trim()
-        .isEmail()
-        .normalizeEmail()
-        .withMessage('Please provide a valid email'),
+        .isLength({ min: 3, max: 100 })
+        .withMessage('Username must be between 3-100 characters'),
 
     body('password')
         .isLength({ min: 6 })
-        .withMessage('Password must be at least 6 characters long')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+        .withMessage('Password must be at least 6 characters long'),
 
     body('name')
         .trim()
-        .isLength({ min: 2, max: 50 })
-        .withMessage('Name must be between 2-50 characters'),
+        .isLength({ min: 2, max: 100 })
+        .withMessage('Name must be between 2-100 characters'),
 
     body('birthday')
+        .optional()
         .isISO8601()
         .withMessage('Please provide a valid date in YYYY-MM-DD format'),
 
@@ -63,20 +54,20 @@ const validateUserLogin = [
 const validateRoomCreation = [
     body('name')
         .trim()
-        .isLength({ min: 1, max: 50 })
-        .withMessage('Room name must be between 1-50 characters'),
-
-    body('description')
-        .optional()
-        .trim()
-        .isLength({ max: 200 })
-        .withMessage('Description cannot exceed 200 characters'),
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Room name must be between 1-100 characters'),
 
     body('adaUsername')
         .optional()
         .trim()
-        .isLength({ max: 50 })
-        .withMessage('Ada username cannot exceed 50 characters'),
+        .isLength({ max: 100 })
+        .withMessage('Ada username cannot exceed 100 characters'),
+
+    body('adakey')
+        .optional()
+        .trim()
+        .isLength({ max: 100 })
+        .withMessage('Ada key cannot exceed 100 characters'),
 
     handleValidationErrors
 ];
@@ -89,24 +80,25 @@ const validateRoomUpdate = [
     body('name')
         .optional()
         .trim()
-        .isLength({ min: 1, max: 50 })
-        .withMessage('Room name must be between 1-50 characters'),
-
-    body('description')
-        .optional()
-        .trim()
-        .isLength({ max: 200 })
-        .withMessage('Description cannot exceed 200 characters'),
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Room name must be between 1-100 characters'),
 
     body('isOccupied')
         .optional()
         .isBoolean()
         .withMessage('isOccupied must be a boolean'),
 
-    body('temperature.target')
+    body('adaUsername')
         .optional()
-        .isFloat({ min: -50, max: 100 })
-        .withMessage('Target temperature must be between -50 and 100'),
+        .trim()
+        .isLength({ max: 100 })
+        .withMessage('Ada username cannot exceed 100 characters'),
+
+    body('adakey')
+        .optional()
+        .trim()
+        .isLength({ max: 100 })
+        .withMessage('Ada key cannot exceed 100 characters'),
 
     body('humidity.target')
         .optional()
@@ -125,28 +117,17 @@ const validateRoomUpdate = [
 const validateDeviceCreation = [
     body('name')
         .trim()
-        .isLength({ min: 1, max: 50 })
-        .withMessage('Device name must be between 1-50 characters'),
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Device name must be between 1-100 characters'),
 
     body('type')
-        .isIn(['light', 'fan', 'air_conditioner', 'heater', 'speaker', 'tv', 'camera', 'sensor', 'switch', 'thermostat', 'humidifier', 'dehumidifier', 'other'])
-        .withMessage('Invalid device type'),
+        .trim()
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Device type must be between 1-100 characters'),
 
-    body('room')
+    body('room_id')
         .isInt({ min: 1 })
         .withMessage('Invalid room ID'),
-
-    body('brand')
-        .optional()
-        .trim()
-        .isLength({ max: 30 })
-        .withMessage('Brand name cannot exceed 30 characters'),
-
-    body('model')
-        .optional()
-        .trim()
-        .isLength({ max: 50 })
-        .withMessage('Model name cannot exceed 50 characters'),
 
     handleValidationErrors
 ];
