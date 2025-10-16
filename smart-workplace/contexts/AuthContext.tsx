@@ -74,26 +74,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (credentials: { username: string; password: string }) => {
         console.log("AuthContext: Starting login process...");
         try {
-            const response = await authAPI.login(credentials);
-            console.log("AuthContext: Login response received:", response.data); // Backend trả về: { success: true, data: { user, token } }
-            const responseData = response.data;
-            const newToken = responseData?.data?.token;
-            const userData = responseData?.data?.user;
+            const raw = await authAPI.login(credentials);
+            // api.login may return either axios.response.data or the full axios response depending on implementation
+            console.log("AuthContext: Raw login response:", raw);
+
+            const payload = raw?.data ?? raw; // normalize
+            console.log("AuthContext: Normalized payload:", payload);
+
+            // Support different possible shapes: { data: { user, token } } or { user, token }
+            const newToken =
+                payload?.data?.token ?? payload?.token ?? payload?.data?.accessToken ?? payload?.accessToken;
+            const userData = payload?.data?.user ?? payload?.user;
 
             console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
             console.log("AuthContext: Extracted user:", userData ? userData.username : "Missing");
 
             if (!newToken || !userData) {
-                console.error("AuthContext: Invalid response structure");
+                console.error("AuthContext: Invalid response structure", payload);
                 throw new Error("Invalid response from server");
             }
 
-            // Lưu vào state
+            // Save to state
             console.log("AuthContext: Setting token and user in state...");
             setToken(newToken);
             setUser(userData);
 
-            // Lưu vào localStorage (chỉ ở client-side)
+            // Save to localStorage (only on client)
             if (typeof window !== "undefined") {
                 localStorage.setItem("token", newToken);
                 localStorage.setItem("user", JSON.stringify(userData));
@@ -103,8 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("AuthContext: Login completed successfully");
         } catch (error: any) {
             console.error("AuthContext: Login error:", error);
-            console.error("AuthContext: Error response:", error.response?.data);
-            throw new Error(error.response?.data?.message || error.message || "Đăng nhập thất bại");
+            console.error("AuthContext: Error response:", error?.response?.data ?? error?.message ?? error);
+            throw new Error(error?.response?.data?.message || error?.message || "Đăng nhập thất bại");
         }
     };
 
@@ -116,11 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         birthday?: string;
     }) => {
         try {
-            const response = await authAPI.register(userData);
+            const raw = await authAPI.register(userData);
+            console.log("AuthContext: Raw register response:", raw);
+            const payload = raw?.data ?? raw;
 
-            // Backend trả về: { success: true, data: { user, token } }
-            const newToken = response.data?.data?.token;
-            const newUser = response.data?.data?.user;
+            const newToken =
+                payload?.data?.token ?? payload?.token ?? payload?.data?.accessToken ?? payload?.accessToken;
+            const newUser = payload?.data?.user ?? payload?.user;
 
             console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
             console.log("AuthContext: Extracted user:", newUser ? newUser.username : "Missing");
@@ -128,13 +136,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!newToken || !newUser) {
                 throw new Error("Invalid response from server");
             }
+
+            // Optionally set auth state after register
+            setToken(newToken);
+            setUser(newUser);
+            if (typeof window !== "undefined") {
+                localStorage.setItem("token", newToken);
+                localStorage.setItem("user", JSON.stringify(newUser));
+            }
         } catch (error: any) {
             console.error("Register error:", error); // Debug log
-            let errorMessage = error.response?.data?.errors
+            let errorMessage = error?.response?.data?.errors
                 ? error.response?.data?.errors.map((err: any) => err.msg).join(", ")
-                : error.response?.data?.message;
+                : error?.response?.data?.message ?? error?.message;
             alert("Đăng ký thất bại: " + errorMessage);
-            throw new Error(error.response?.data?.error || "Đăng ký thất bại");
+            throw new Error(error?.response?.data?.error || "Đăng ký thất bại");
         }
     };
 

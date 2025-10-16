@@ -135,7 +135,7 @@ export default function LoginPage() {
                             </Button>
 
                             {/* Debug buttons */}
-                            <div className="space-y-2">
+                            {/* <div className="space-y-2">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -172,7 +172,7 @@ export default function LoginPage() {
                                 >
                                     📝 Fill Demo Credentials
                                 </Button>
-                            </div>
+                            </div> */}
                         </form>
 
                         <div className="mt-6 text-center">
@@ -185,7 +185,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* Demo credentials */}
-                        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                        {/* <div className="mt-6 p-4 bg-muted/50 rounded-lg">
                             <p className="text-sm text-muted-foreground mb-2">Tài khoản demo:</p>
                             <div className="text-xs space-y-1">
                                 <p>
@@ -195,7 +195,7 @@ export default function LoginPage() {
                                     <strong>Username:</strong> khoa123 | <strong>Password:</strong> 123456
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
                     </CardContent>
                 </Card>
             </div>
