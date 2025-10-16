@@ -75,12 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("AuthContext: Starting login process...");
         try {
             const response = await authAPI.login(credentials);
-            console.log("AuthContext: Login response received:", response.data);
-
-            // Backend trả về: { success: true, data: { user, token } }
+            console.log("AuthContext: Login response received:", response.data); // Backend trả về: { success: true, data: { user, token } }
             const responseData = response.data;
-            const newToken = responseData?.token;
-            const userData = responseData?.user;
+            const newToken = responseData?.data?.token;
+            const userData = responseData?.data?.user;
 
             console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
             console.log("AuthContext: Extracted user:", userData ? userData.username : "Missing");
@@ -121,8 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const response = await authAPI.register(userData);
 
             // Backend trả về: { success: true, data: { user, token } }
-            const newToken = response.data?.token;
-            const newUser = response.data?.user;
+            const newToken = response.data?.data?.token;
+            const newUser = response.data?.data?.user;
 
             console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
             console.log("AuthContext: Extracted user:", newUser ? newUser.username : "Missing");
