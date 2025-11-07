@@ -40,6 +40,7 @@ export default function LoginPage() {
         try {
             await login(formData);
             // Redirect ngay sau khi login thành công
+            setLoading(false);
             router.replace("/dashboard");
         } catch (error: any) {
             console.error("Login form error:", error);

@@ -63,7 +63,7 @@ export default function RegisterPage() {
                 name: formData.name,
                 birthday: formData.birthday,
             };
-    
+
             // Store user and redirect to login
 
             alert("Đăng ký thành công");
@@ -73,12 +73,11 @@ export default function RegisterPage() {
 
             // router.push("/dashboard");
         } catch (error: any) {
-            setError(error.message || "Đăng ký thất bại");
-        } finally {
+            console.error("Register page error:", error);
+            const errorMessage = error.message || "Đăng ký thất bại";
+            setError(errorMessage);
             setLoading(false);
         }
-
-        setLoading(false);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -17,6 +17,7 @@ const deviceRoutes = require("./routes/devices");
 const environmentRoutes = require("./routes/environment");
 const notificationRoutes = require("./routes/notifications");
 const usageHistoryRoutes = require("./routes/usageHistory");
+const adafruitRoutes = require("./routes/adafruit");
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use("/api/devices", deviceRoutes);
 app.use("/api/environment", environmentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/usage-history", usageHistoryRoutes);
+app.use("/api/adafruit", adafruitRoutes);
 
 // 404 handler
 app.use(notFound);

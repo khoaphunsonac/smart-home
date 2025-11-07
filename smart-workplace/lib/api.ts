@@ -6,11 +6,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 // Tạo axios instance
 const apiClient = axios.create({
     baseURL: `${API_BASE_URL}/api`,
-    timeout: 10000,
+    timeout: 15000, // Tăng timeout lên 15 giây
     headers: {
         "Content-Type": "application/json",
     },
 });
+
+// Log API base URL khi khởi tạo (chỉ ở client-side)
+if (typeof window !== "undefined") {
+    console.log("API Base URL:", `${API_BASE_URL}/api`);
+}
 
 // Request interceptor - thêm token vào header
 apiClient.interceptors.request.use(
@@ -62,11 +67,29 @@ export const authAPI = {
         birthday?: string;
     }) => {
         try {
+            console.log("Register API call with baseURL:", apiClient.defaults.baseURL);
+            console.log("Register API payload:", { ...userData, password: "***" });
             const response = await apiClient.post("/auth/register", userData);
             console.log("Register API response:", response.data);
             return response.data;
         } catch (error: any) {
-            console.error("Register API error:", error.response?.data || error.message);
+            console.error("Register API error:", error);
+            console.error("Error details:", {
+                message: error.message,
+                code: error.code,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+
+            // Xử lý network errors
+            if (error.code === "ECONNREFUSED" || error.code === "ERR_NETWORK" || error.message === "Network Error") {
+                const networkError = new Error(
+                    "Không thể kết nối đến server. Vui lòng kiểm tra backend có đang chạy không."
+                );
+                (networkError as any).isNetworkError = true;
+                throw networkError;
+            }
+
             throw error;
         }
     },
