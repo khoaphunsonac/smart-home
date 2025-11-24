@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Home, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { testAPI, testCORS } from "@/lib/test-api";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -39,13 +40,14 @@ export default function LoginPage() {
         try {
             await login(formData);
             // Redirect ngay sau khi login thành công
+            setLoading(false);
             router.replace("/dashboard");
         } catch (error: any) {
             console.error("Login form error:", error);
             console.error("Error details:", {
                 message: error.message,
                 response: error.response?.data,
-                status: error.response?.status
+                status: error.response?.status,
             });
 
             setError(error.message || "Đăng nhập thất bại");
@@ -133,6 +135,45 @@ export default function LoginPage() {
                                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                             </Button>
 
+                            {/* Debug buttons */}
+                            {/* <div className="space-y-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={async () => {
+                                        try {
+                                            console.log("Testing CORS...");
+                                            const corsResult = await testCORS();
+                                            console.log("CORS test result:", corsResult);
+
+                                            console.log("Testing API...");
+                                            const result = await testAPI();
+                                            console.log("API test result:", result);
+                                            alert("API tests completed - check console for details");
+                                        } catch (error) {
+                                            console.error("Tests failed:", error);
+                                            alert("Tests failed - check console for details");
+                                        }
+                                    }}
+                                >
+                                    🧪 Test API & CORS
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="w-full"
+                                    onClick={() => {
+                                        setFormData({
+                                            username: "khoatrandang020704",
+                                            password: "test123T",
+                                        });
+                                    }}
+                                >
+                                    📝 Fill Demo Credentials
+                                </Button>
+                            </div> */}
                         </form>
 
                         <div className="mt-6 text-center">
@@ -145,7 +186,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* Demo credentials */}
-                        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                        {/* <div className="mt-6 p-4 bg-muted/50 rounded-lg">
                             <p className="text-sm text-muted-foreground mb-2">Tài khoản demo:</p>
                             <div className="text-xs space-y-1">
                                 <p>
@@ -155,7 +196,7 @@ export default function LoginPage() {
                                     <strong>Username:</strong> khoa123 | <strong>Password:</strong> 123456
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
                     </CardContent>
                 </Card>
             </div>

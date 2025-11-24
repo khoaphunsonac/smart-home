@@ -279,14 +279,14 @@ export default function RoomDetailsPage() {
               <CardDescription>Thông tin kết nối Adafruit IO</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+              <div className="space-y-4">                <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Adafruit Username:</span>
-                  <span className="font-mono text-card-foreground">{room.adaUsername}</span>
-                </div>
-                <div className="flex items-center justify-between">
+                  <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
+                </div><div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">API Key:</span>
-                  <span className="font-mono text-card-foreground">{room.adakey.substring(0, 8)}***</span>
+                  <span className="font-mono text-card-foreground">
+                    {room.adakey ? `${room.adakey.substring(0, 8)}***` : 'Chưa cấu hình'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Số thiết bị:</span>
