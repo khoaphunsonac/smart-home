@@ -4,10 +4,6 @@ const { authenticateToken } = require("../middleware/auth");
 const { validatePagination, validateId } = require("../middleware/validation");
 const AdafruitService = require("../utils/adafruit");
 
-// Default Adafruit IO credentials
-const DEFAULT_ADA_USERNAME = "Tusla";
-const DEFAULT_ADA_KEY = "aio_kciA19Izj8kkk1lIKvZ6Mm0yvDu1";
-
 const router = express.Router();
 
 // Apply authentication to all routes
@@ -129,28 +125,30 @@ router.post("/:roomId", validateId, async (req, res) => {
         // Lấy user để lấy credentials từ user
         const user = await User.findByPk(req.user.id);
 
-        // Chỉ dùng User credentials hoặc Default
-        const adaUsername = user?.adaUsername || DEFAULT_ADA_USERNAME;
-        const adakey = user?.adakey || DEFAULT_ADA_KEY;
-        const adafruit = new AdafruitService(adaUsername, adakey);
+        // Only use user's own credentials
+        if (!user?.adaUsername || !user?.adakey) {
+            console.warn("User does not have Adafruit credentials, skipping sync");
+        } else {
+            const adafruit = new AdafruitService(user.adaUsername, user.adakey);
 
-        // Gửi dữ liệu lên các feed tương ứng
-        const adafruitData = {};
-        if (temperature !== undefined && temperature !== null) {
-            adafruitData.temperature = temperature;
-        }
-        if (humidity !== undefined && humidity !== null) {
-            adafruitData.humidity = humidity;
-        }
-        if (lightLevel !== undefined && lightLevel !== null) {
-            adafruitData.lightlevel = lightLevel;
-        }
+            // Gửi dữ liệu lên các feed tương ứng
+            const adafruitData = {};
+            if (temperature !== undefined && temperature !== null) {
+                adafruitData.temperature = temperature;
+            }
+            if (humidity !== undefined && humidity !== null) {
+                adafruitData.humidity = humidity;
+            }
+            if (lightLevel !== undefined && lightLevel !== null) {
+                adafruitData.lightlevel = lightLevel;
+            }
 
-        if (Object.keys(adafruitData).length > 0) {
-            // Gửi bất đồng bộ, không chờ kết quả để không làm chậm response
-            adafruit.sendMultipleData(adafruitData).catch((err) => {
-                console.error("Failed to send data to Adafruit IO:", err);
-            });
+            if (Object.keys(adafruitData).length > 0) {
+                // Gửi bất đồng bộ, không chờ kết quả để không làm chậm response
+                adafruit.sendMultipleData(adafruitData).catch((err) => {
+                    console.error("Failed to send data to Adafruit IO:", err);
+                });
+            }
         }
 
         res.status(201).json({
@@ -162,6 +160,71 @@ router.post("/:roomId", validateId, async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to create environment data",
+            error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        });
+    }
+});
+
+// @desc    Generate mock environment data for testing (without hardware)
+// @route   POST /api/environment/:roomId/mock
+// @access  Private
+router.post("/:roomId/mock", validateId, async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const { count = 20 } = req.body; // Number of mock records to create
+
+        // Check if room belongs to user
+        const room = await Room.findOne({
+            where: {
+                id: roomId,
+                user_id: req.user.id,
+            },
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Room not found",
+            });
+        }
+
+        // Generate mock data with realistic values
+        const mockDataArray = [];
+        const now = new Date();
+
+        for (let i = 0; i < count; i++) {
+            // Generate timestamps going backwards (newest first)
+            const timestamp = new Date(now.getTime() - i * 10000); // 10 seconds apart
+
+            // Generate realistic values with some variation
+            const temperature = 25 + Math.sin(i / 3) * 3 + (Math.random() - 0.5) * 2; // 22-28°C
+            const humidity = 60 + Math.sin(i / 4) * 10 + (Math.random() - 0.5) * 5; // 50-70%
+            const lightLevel = 50 + Math.sin(i / 2) * 30 + (Math.random() - 0.5) * 10; // 20-80 lux
+
+            mockDataArray.push({
+                temperature: parseFloat(temperature.toFixed(1)),
+                humidity: parseFloat(humidity.toFixed(1)),
+                lightLevel: parseFloat(lightLevel.toFixed(0)),
+                room_id: roomId,
+                timestamp: timestamp,
+            });
+        }
+
+        // Bulk insert mock data
+        const createdData = await EnvironmentData.bulkCreate(mockDataArray);
+
+        res.status(201).json({
+            success: true,
+            message: `Successfully generated ${count} mock environment data records`,
+            data: {
+                count: createdData.length,
+                latest: createdData[0],
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to generate mock data",
             error: process.env.NODE_ENV === "development" ? error.message : undefined,
         });
     }

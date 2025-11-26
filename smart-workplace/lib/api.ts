@@ -236,6 +236,12 @@ export const environmentAPI = {
         const response = await apiClient.post(`/environment/${roomId}`, data);
         return response.data;
     },
+
+    // Generate mock environment data for testing (without hardware)
+    generateMockData: async (roomId: string, count?: number) => {
+        const response = await apiClient.post(`/environment/${roomId}/mock`, { count: count || 20 });
+        return response.data;
+    },
 };
 
 // Notifications API

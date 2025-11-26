@@ -8,7 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Thermometer, Droplets, Sun, Lightbulb, Wind, Tv, Snowflake, Settings, Activity, RefreshCw } from "lucide-react"
+import { 
+  ArrowLeft, Thermometer, Droplets, Sun, Lightbulb, Wind, 
+  Settings, Activity, RefreshCw, Trash2, AlertTriangle, Beaker, Snowflake, Tv
+} from "lucide-react"
 import { roomsAPI, devicesAPI, environmentAPI, adafruitAPI } from "@/lib/api"
 
 export default function RoomDetailsPage() {
@@ -23,6 +26,7 @@ export default function RoomDetailsPage() {
   const [environmentData, setEnvironmentData] = useState<any>(null)
   const [deviceStates, setDeviceStates] = useState<{ [key: number]: boolean }>({})
   const [syncing, setSyncing] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 
   useEffect(() => {
@@ -151,6 +155,44 @@ export default function RoomDetailsPage() {
     }
     
     setSyncing(false)
+  }
+
+  const handleGenerateMockData = async () => {
+    setGenerating(true)
+    setSyncMessage(null)
+    
+    try {
+      const response = await environmentAPI.generateMockData(roomId.toString(), 20)
+      
+      if (response.success) {
+        // Reload environment data
+        const envResponse = await environmentAPI.getLatestEnvironmentData(roomId.toString())
+        if (envResponse.success) {
+          setEnvironmentData(envResponse.data.environmentData)
+        }
+        
+        setSyncMessage({
+          type: 'success',
+          text: `Đã tạo ${response.data.count} bản ghi dữ liệu môi trường mẫu!`
+        })
+        setTimeout(() => setSyncMessage(null), 5000)
+      } else {
+        setSyncMessage({
+          type: 'error',
+          text: response.message || 'Không thể tạo dữ liệu mẫu'
+        })
+        setTimeout(() => setSyncMessage(null), 5000)
+      }
+    } catch (error: any) {
+      console.error("Error generating mock data:", error)
+      setSyncMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Có lỗi xảy ra khi tạo dữ liệu mẫu'
+      })
+      setTimeout(() => setSyncMessage(null), 5000)
+    }
+    
+    setGenerating(false)
   }
 
   const toggleDevice = async (deviceId: number) => {
@@ -308,15 +350,26 @@ export default function RoomDetailsPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">Điều khiển thiết bị</h2>
-            <Button 
-              onClick={handleSyncDevices} 
-              disabled={syncing}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Đang đồng bộ...' : 'Đồng bộ từ Adafruit IO'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handleGenerateMockData} 
+                disabled={generating}
+                variant="outline"
+                className="flex items-center gap-2 border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+              >
+                <Beaker className={`w-4 h-4 ${generating ? 'animate-pulse' : ''}`} />
+                {generating ? 'Đang tạo...' : 'Tạo dữ liệu mẫu'}
+              </Button>
+              <Button 
+                onClick={handleSyncDevices} 
+                disabled={syncing}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Đang đồng bộ...' : 'Đồng bộ từ Adafruit IO'}
+              </Button>
+            </div>
           </div>
           {devices.length === 0 ? (
             <Card className="bg-card border-border">
