@@ -9,19 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Home, ArrowLeft, Plus, Eye, EyeOff } from "lucide-react"
+import { Home, ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
-import { roomsAPI } from "@/lib/api"
+import { roomsAPI, adafruitAPI } from "@/lib/api"
 
 export default function CreateRoomPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: "",
-    adaUsername: "",
-    adakey: "",
   })
-  const [showApiKey, setShowApiKey] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -47,29 +44,35 @@ export default function CreateRoomPage() {
       return
     }
 
-    if (!formData.adaUsername.trim()) {
-      setError("Vui lòng nhập Adafruit Username")
-      setLoading(false)
-      return
-    }
-
-    if (!formData.adakey.trim()) {
-      setError("Vui lòng nhập Adafruit API Key")
-      setLoading(false)
-      return
-    }
-
     try {
-      // Call real API to create room
+      // Call API to create room (Adafruit credentials are taken from user profile)
       const response = await roomsAPI.createRoom({
         name: formData.name,
-        adaUsername: formData.adaUsername,
-        adakey: formData.adakey
       })
 
       if (response.success) {
-        // Redirect back to dashboard with success message
-        router.push("/dashboard?roomCreated=true")
+        const newRoom = response.data.room
+        const roomId = newRoom.id
+
+        // Tự động sync devices từ Adafruit IO sau khi tạo phòng thành công
+        try {
+          console.log(`Syncing devices from Adafruit IO for room ${roomId}...`)
+          const syncResponse = await adafruitAPI.syncDevices(roomId.toString())
+          
+          if (syncResponse.success) {
+            console.log(`Successfully synced ${syncResponse.data.createdDevices} devices`)
+            // Redirect to room detail page để xem các devices đã sync
+            router.push(`/dashboard/room/${roomId}?synced=true`)
+          } else {
+            console.warn("Failed to sync devices:", syncResponse.message)
+            // Vẫn redirect đến room detail page nhưng không có query param synced
+            router.push(`/dashboard/room/${roomId}`)
+          }
+        } catch (syncError: any) {
+          console.error("Error syncing devices from Adafruit IO:", syncError)
+          // Vẫn redirect đến room detail page dù sync fail
+          router.push(`/dashboard/room/${roomId}?syncError=true`)
+        }
       } else {
         setError(response.message || "Có lỗi xảy ra khi tạo phòng")
       }
@@ -134,7 +137,9 @@ export default function CreateRoomPage() {
                 <Plus className="w-5 h-5 mr-2" />
                 Thông tin phòng mới
               </CardTitle>
-              <CardDescription>Nhập thông tin cần thiết để kết nối và quản lý phòng thông minh</CardDescription>
+              <CardDescription>
+                Nhập tên phòng để tạo. Thông tin Adafruit IO sẽ được lấy từ profile của bạn.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,63 +164,15 @@ export default function CreateRoomPage() {
                   <p className="text-xs text-muted-foreground">Đặt tên dễ nhận biết cho phòng của bạn</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="adaUsername">Adafruit Username *</Label>
-                  <Input
-                    id="adaUsername"
-                    name="adaUsername"
-                    type="text"
-                    placeholder="Nhập username Adafruit IO"
-                    value={formData.adaUsername}
-                    onChange={handleChange}
-                    required
-                    className="bg-input border-border font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Username tài khoản Adafruit IO để kết nối với thiết bị IoT
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="adakey">Adafruit API Key *</Label>
-                  <div className="relative">
-                    <Input
-                      id="adakey"
-                      name="adakey"
-                      type={showApiKey ? "text" : "password"}
-                      placeholder="Nhập API key từ Adafruit IO"
-                      value={formData.adakey}
-                      onChange={handleChange}
-                      required
-                      className="bg-input border-border font-mono pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">API key bảo mật để xác thực với dịch vụ Adafruit IO</p>
-                </div>
-
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-card-foreground mb-2">Hướng dẫn lấy thông tin Adafruit IO:</h4>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <h4 className="font-semibold text-card-foreground mb-2">📌 Lưu ý:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                     <li>
-                      Truy cập <span className="font-mono">io.adafruit.com</span>
+                      Phòng sẽ tự động kết nối với Adafruit IO sử dụng thông tin đã lưu trong profile của bạn
                     </li>
-                    <li>Đăng nhập hoặc tạo tài khoản miễn phí</li>
-                    <li>Vào phần "My Key" để lấy Username và API Key</li>
-                    <li>Sao chép thông tin vào form này</li>
-                  </ol>
+                    <li>Bạn có thể cập nhật thông tin Adafruit IO trong phần Cài đặt Profile</li>
+                    <li>Sau khi tạo phòng, bạn có thể thêm thiết bị IoT vào phòng</li>
+                  </ul>
                 </div>
 
                 <div className="flex space-x-4 pt-4">

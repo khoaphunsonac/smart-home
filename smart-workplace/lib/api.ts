@@ -284,3 +284,48 @@ export const usageHistoryAPI = {
         return response.data;
     },
 };
+
+// Adafruit IO API
+export const adafruitAPI = {
+    // Verify Adafruit IO credentials
+    verifyCredentials: async (data: { adakey: string; adaUsername?: string }) => {
+        const response = await apiClient.post("/adafruit/verify", data);
+        return response.data;
+    },
+
+    // Lấy danh sách feeds từ Adafruit IO
+    getFeeds: async (roomId: string) => {
+        const response = await apiClient.get(`/adafruit/${roomId}/feeds`);
+        return response.data;
+    },
+
+    // Lấy dữ liệu từ một feed
+    getFeedData: async (roomId: string, feedKey: string, params?: { limit?: number }) => {
+        const response = await apiClient.get(`/adafruit/${roomId}/feeds/${feedKey}`, { params });
+        return response.data;
+    },
+
+    // Lấy thông tin chi tiết của một feed
+    getFeedInfo: async (roomId: string, feedKey: string) => {
+        const response = await apiClient.get(`/adafruit/${roomId}/feeds/${feedKey}/info`);
+        return response.data;
+    },
+
+    // Gửi dữ liệu lên Adafruit IO
+    sendData: async (roomId: string, data: { feedKey: string; value: string | number }) => {
+        const response = await apiClient.post(`/adafruit/${roomId}/send`, data);
+        return response.data;
+    },
+
+    // Sync environment data từ DB lên Adafruit IO
+    syncEnvironmentData: async (roomId: string, params?: { limit?: number }) => {
+        const response = await apiClient.post(`/adafruit/sync/${roomId}`, null, { params });
+        return response.data;
+    },
+
+    // Sync devices từ Adafruit IO feeds vào database
+    syncDevices: async (roomId: string) => {
+        const response = await apiClient.post(`/adafruit/${roomId}/sync-devices`);
+        return response.data;
+    },
+};

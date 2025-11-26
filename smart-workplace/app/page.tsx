@@ -140,7 +140,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border mt-16">
         <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-muted-foreground">© 2025 SmartWorkplace. Được phát triển bởi Nhóm 3 - ĐHBK TP.HCM</p>
+          <p className="text-muted-foreground">© 2025 SmartWorkplace. Được phát triển bởi Nhóm 8 - ĐHBK TP.HCM</p>
         </div>
       </footer>
     </div>

@@ -1,6 +1,6 @@
 # Smart Home Backend API
 
-Backend API cho hệ thống quản lý nhà thông minh được xây dựng với Node.js, Express.js và MongoDB.
+Backend API cho hệ thống quản lý nhà thông minh được xây dựng với Node.js, Express.js và Azure MySQL.
 
 ## 🚀 Tính năng
 
@@ -73,23 +73,38 @@ Cập nhật các biến trong file `.env`:
 ```env
 NODE_ENV=development
 PORT=5000
-DB_HOST=localhost
+
+# Azure MySQL Flexible Server Configuration
+DB_HOST=khoo.mysql.database.azure.com
 DB_PORT=3306
 DB_NAME=smart_home
-DB_USER=root
-DB_PASSWORD=your_mysql_password
+DB_USER=khoa020704
+DB_PASSWORD=Test1234
+
 JWT_SECRET=your-super-secret-jwt-key-here
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=http://localhost:3000
 ```
 
-### 3. Khởi động MySQL
+**Lưu ý về Azure MySQL Flexible Server:**
+- Database sử dụng Azure MySQL Flexible Server
+- SSL được tự động bật khi kết nối với Azure (đã cấu hình trong `config/database.js`)
+- Username **KHÔNG cần** thêm `@servername` (khác với Single Server)
+- Đảm bảo IP của bạn được thêm vào Azure MySQL Firewall Rules
+- Server phải ở trạng thái "Available" để kết nối được
 
-Đảm bảo MySQL đang chạy trên máy của bạn và tạo database:
+### 3. Chuẩn bị Database
 
+Database `smart_home` cần được tạo trên Azure MySQL server. Bạn có thể:
+
+**Option 1: Tạo qua Azure Portal**
+- Truy cập Azure Portal → MySQL Server → Databases
+- Tạo database mới với tên `smart_home`
+
+**Option 2: Tạo qua MySQL Client**
 ```bash
-# Đăng nhập vào MySQL
-mysql -u root -p
+# Kết nối tới Azure MySQL
+mysql -h khoo.mysql.database.azure.com -u khoa020704 -p
 
 # Tạo database
 CREATE DATABASE smart_home;
@@ -260,14 +275,25 @@ npm run test:watch
 ```env
 NODE_ENV=production
 PORT=5000
-DB_HOST=your-mysql-server.com
+
+# Azure MySQL Flexible Server - Production
+DB_HOST=khoo.mysql.database.azure.com
 DB_PORT=3306
 DB_NAME=smart_home
-DB_USER=your_username
-DB_PASSWORD=your_secure_password
-JWT_SECRET=your-production-jwt-secret
+DB_USER=khoa020704
+DB_PASSWORD=your-secure-production-password
+
+JWT_SECRET=your-production-jwt-secret-change-this
+JWT_EXPIRES_IN=7d
 FRONTEND_URL=https://your-frontend-domain.com
 ```
+
+**Lưu ý Production:**
+- SSL tự động được bật cho Azure MySQL Flexible Server
+- Đảm bảo đổi password production khác với development
+- JWT_SECRET phải đủ phức tạp và bảo mật
+- Cập nhật FRONTEND_URL với domain thực tế của frontend
+- Cấu hình Firewall cho phép IP của production server
 
 ### PM2 (Process Manager)
 
