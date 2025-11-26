@@ -23,6 +23,8 @@ interface AuthContextType {
         password: string;
         name: string;
         birthday?: string;
+        adaUsername: string;
+        adakey: string;
     }) => Promise<void>;
     logout: () => void;
     updateProfile: (userData: { name?: string; birthday?: string }) => Promise<void>;
@@ -135,6 +137,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password: string;
         name: string;
         birthday?: string;
+        adaUsername: string;
+        adakey: string;
     }) => {
         console.log("AuthContext: Starting register process...");
         try {

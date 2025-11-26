@@ -25,12 +25,16 @@ router.post("/register", validateUserRegistration, async (req, res) => {
             });
         }
 
+        // Validate Adafruit credentials are provided
+        if (!adaUsername || !adakey) {
+            return res.status(400).json({
+                success: false,
+                message: "Adafruit IO credentials (adaUsername and adakey) are required",
+            });
+        }
+
         // Generate unique user ID
         const userId = "U" + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase();
-
-        // Default Adafruit IO credentials (nếu không được cung cấp)
-        const DEFAULT_ADA_USERNAME = "Tusla";
-        const DEFAULT_ADA_KEY = "aio_kciA19Izj8kkk1lIKvZ6Mm0yvDu1";
 
         // Create new user
         const user = await User.create({
@@ -39,9 +43,8 @@ router.post("/register", validateUserRegistration, async (req, res) => {
             pass: password,
             name,
             birthday,
-            // Sử dụng credentials từ request hoặc mặc định
-            adaUsername: adaUsername || DEFAULT_ADA_USERNAME,
-            adakey: adakey || DEFAULT_ADA_KEY,
+            adaUsername,
+            adakey,
         });
 
         // Generate JWT token

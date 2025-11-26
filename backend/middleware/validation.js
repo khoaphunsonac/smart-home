@@ -24,12 +24,18 @@ const validateUserRegistration = [
     body("birthday").optional().isISO8601().withMessage("Please provide a valid date in YYYY-MM-DD format"),
 
     body("adaUsername")
-        .optional()
         .trim()
-        .isLength({ max: 100 })
-        .withMessage("Ada username cannot exceed 100 characters"),
+        .notEmpty()
+        .withMessage("Adafruit IO username is required")
+        .isLength({ min: 3, max: 100 })
+        .withMessage("Adafruit IO username must be between 3-100 characters"),
 
-    body("adakey").optional().trim().isLength({ max: 100 }).withMessage("Ada key cannot exceed 100 characters"),
+    body("adakey")
+        .trim()
+        .notEmpty()
+        .withMessage("Adafruit IO key is required")
+        .isLength({ min: 10, max: 100 })
+        .withMessage("Adafruit IO key must be between 10-100 characters"),
 
     handleValidationErrors,
 ];

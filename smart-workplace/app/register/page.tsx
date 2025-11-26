@@ -23,6 +23,8 @@ export default function RegisterPage() {
         confirmPassword: "",
         name: "",
         birthday: "",
+        adaUsername: "",
+        adakey: "",
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -54,6 +56,8 @@ export default function RegisterPage() {
                 password: formData.password,
                 name: formData.name,
                 birthday: formData.birthday,
+                adaUsername: formData.adaUsername,
+                adakey: formData.adakey,
             });
 
             const newUser = {
@@ -166,6 +170,49 @@ export default function RegisterPage() {
                                     required
                                     className="bg-input border-border"
                                 />
+                            </div>
+
+                            {/* Adafruit IO Credentials Section */}
+                            <div className="pt-4 border-t border-border">
+                                <h3 className="text-sm font-semibold text-foreground mb-3">
+                                    Thông tin Adafruit IO
+                                </h3>
+                                <p className="text-xs text-muted-foreground mb-4">
+                                    Nhập thông tin Adafruit IO của bạn để kết nối với các thiết bị IoT
+                                </p>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="adaUsername">Adafruit IO Username</Label>
+                                        <Input
+                                            id="adaUsername"
+                                            name="adaUsername"
+                                            type="text"
+                                            placeholder="Nhập Adafruit username"
+                                            value={formData.adaUsername}
+                                            onChange={handleChange}
+                                            required
+                                            className="bg-input border-border"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="adakey">Adafruit IO Key</Label>
+                                        <Input
+                                            id="adakey"
+                                            name="adakey"
+                                            type="text"
+                                            placeholder="Nhập Adafruit IO Key (aio_...)"
+                                            value={formData.adakey}
+                                            onChange={handleChange}
+                                            required
+                                            className="bg-input border-border font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Tìm key tại: <a href="https://io.adafruit.com/api/docs/#authentication" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">io.adafruit.com</a>
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-2">
