@@ -334,4 +334,10 @@ export const adafruitAPI = {
         const response = await apiClient.post(`/adafruit/${roomId}/sync-devices`);
         return response.data;
     },
+
+    // Pull environment data from Adafruit IO and save to database (realtime)
+    pullEnvironmentData: async (roomId: string) => {
+        const response = await apiClient.post(`/adafruit/${roomId}/pull-environment`);
+        return response.data;
+    },
 };

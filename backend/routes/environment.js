@@ -1,7 +1,7 @@
 const express = require("express");
 const { EnvironmentData, Room, User } = require("../models");
 const { authenticateToken } = require("../middleware/auth");
-const { validatePagination, validateId } = require("../middleware/validation");
+const { validatePagination, validateRoomId } = require("../middleware/validation");
 const AdafruitService = require("../utils/adafruit");
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.use(authenticateToken);
 // @desc    Get environment data for a room
 // @route   GET /api/environment/:roomId
 // @access  Private
-router.get("/:roomId", validateId, async (req, res) => {
+router.get("/:roomId", validateRoomId, async (req, res) => {
     try {
         const { roomId } = req.params;
         const limit = parseInt(req.query.limit) || 10;
@@ -54,7 +54,7 @@ router.get("/:roomId", validateId, async (req, res) => {
 // @desc    Get latest environment data for a room
 // @route   GET /api/environment/:roomId/latest
 // @access  Private
-router.get("/:roomId/latest", validateId, async (req, res) => {
+router.get("/:roomId/latest", validateRoomId, async (req, res) => {
     try {
         const { roomId } = req.params;
 
@@ -94,7 +94,7 @@ router.get("/:roomId/latest", validateId, async (req, res) => {
 // @desc    Create new environment data
 // @route   POST /api/environment/:roomId
 // @access  Private
-router.post("/:roomId", validateId, async (req, res) => {
+router.post("/:roomId", validateRoomId, async (req, res) => {
     try {
         const { roomId } = req.params;
         const { temperature, humidity, lightLevel } = req.body;
@@ -168,7 +168,7 @@ router.post("/:roomId", validateId, async (req, res) => {
 // @desc    Generate mock environment data for testing (without hardware)
 // @route   POST /api/environment/:roomId/mock
 // @access  Private
-router.post("/:roomId/mock", validateId, async (req, res) => {
+router.post("/:roomId/mock", validateRoomId, async (req, res) => {
     try {
         const { roomId } = req.params;
         const { count = 20 } = req.body; // Number of mock records to create

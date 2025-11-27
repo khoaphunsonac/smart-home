@@ -17,7 +17,8 @@ const EnvironmentData = sequelize.define('EnvironmentData', {
     },
     lightLevel: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
+        field: 'lightLevel'
     },
     timestamp: {
         type: DataTypes.DATE,

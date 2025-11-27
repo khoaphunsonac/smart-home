@@ -167,7 +167,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
-
+                {/* Historical Use */}
                 {/* Rooms Section */}
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-bold text-foreground">Danh sách phòng</h3>

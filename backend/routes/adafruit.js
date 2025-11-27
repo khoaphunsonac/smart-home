@@ -6,10 +6,6 @@ const AdafruitService = require("../utils/adafruit");
 
 const router = express.Router();
 
-// Default Adafruit IO credentials
-const DEFAULT_ADA_USERNAME = "Tusla";
-const DEFAULT_ADA_KEY = "aio_kciA19Izj8kkk1lIKvZ6Mm0yvDu1";
-
 // Apply authentication to all routes
 router.use(authenticateToken);
 
@@ -747,6 +743,91 @@ router.get("/:roomId/feeds/:feedKey", validateRoomId, async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to get data from Adafruit IO",
+            error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        });
+    }
+});
+
+// @desc    Pull environment data từ Adafruit IO và lưu vào database (realtime sync)
+// @route   POST /api/adafruit/:roomId/pull-environment
+// @access  Private
+router.post("/:roomId/pull-environment", validateRoomId, async (req, res) => {
+    try {
+        const { roomId } = req.params;
+
+        // Kiểm tra room
+        const room = await Room.findOne({
+            where: {
+                id: roomId,
+                user_id: req.user.id,
+            },
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Room not found",
+            });
+        }
+
+        // Lấy user credentials
+        const user = await User.findByPk(req.user.id);
+
+        if (!user?.adaUsername || !user?.adakey) {
+            return res.status(400).json({
+                success: false,
+                message: "Adafruit IO credentials not configured",
+            });
+        }
+
+        const adafruit = new AdafruitService(user.adaUsername, user.adakey);
+
+        // Lấy data mới nhất từ các feeds (V1=temp, V2=humidity, V3=light)
+        const feedKeys = ['v1', 'v2', 'v3']; // temperature, humidity, light
+        const feedData = {};
+
+        // Fetch latest data from each feed
+        for (const feedKey of feedKeys) {
+            try {
+                const result = await adafruit.getData(feedKey, 1); // Get latest 1 record
+                if (result.success && result.data && result.data.length > 0) {
+                    feedData[feedKey] = parseFloat(result.data[0].value);
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch ${feedKey}:`, error.message);
+            }
+        }
+
+        if (Object.keys(feedData).length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No data found in Adafruit IO feeds",
+            });
+        }
+
+        // Lưu vào database
+        const environmentData = await EnvironmentData.create({
+            temperature: feedData.v1 || null,
+            humidity: feedData.v2 || null,
+            lightLevel: feedData.v3 || null,
+            room_id: roomId,
+            timestamp: new Date(),
+        });
+
+        res.json({
+            success: true,
+            message: "Environment data pulled and saved successfully",
+            data: {
+                environmentData,
+                source: "Adafruit IO",
+                feedData,
+            },
+        });
+    } catch (error) {
+        console.error("Error pulling data from Adafruit IO:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to pull data from Adafruit IO",
             error: process.env.NODE_ENV === "development" ? error.message : undefined,
         });
     }

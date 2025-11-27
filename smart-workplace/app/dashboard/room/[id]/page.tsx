@@ -13,6 +13,7 @@ import {
   Settings, Activity, RefreshCw, Trash2, AlertTriangle, Beaker, Snowflake, Tv
 } from "lucide-react"
 import { roomsAPI, devicesAPI, environmentAPI, adafruitAPI } from "@/lib/api"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 export default function RoomDetailsPage() {
   const router = useRouter()
@@ -28,6 +29,8 @@ export default function RoomDetailsPage() {
   const [syncing, setSyncing] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+  const [isRealtime, setIsRealtime] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -195,6 +198,51 @@ export default function RoomDetailsPage() {
     setGenerating(false)
   }
 
+  // Pull realtime data from Adafruit IO
+  const pullRealtimeData = async () => {
+    try {
+      const response = await adafruitAPI.pullEnvironmentData(roomId.toString())
+      if (response.success) {
+        setEnvironmentData(response.data.environmentData)
+        // Reload historical data
+        loadHistoricalData()
+      }
+    } catch (error: any) {
+      console.error("Error pulling realtime data:", error)
+    }
+  }
+
+  // Load historical data (last 5 minutes)
+  const loadHistoricalData = async () => {
+    try {
+      const response = await environmentAPI.getEnvironmentData(roomId.toString(), { limit: 100 })
+      if (response.success && response.data.environmentData) {
+        // Filter data within last 5 minutes
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+        const filteredData = response.data.environmentData.filter((item: any) => {
+          return new Date(item.timestamp) >= fiveMinutesAgo
+        }).reverse() // Reverse to show oldest first for charts
+        
+        setHistoricalData(filteredData)
+      }
+    } catch (error) {
+      console.error("Error loading historical data:", error)
+    }
+  }
+
+  // Auto-refresh realtime data every 10 seconds
+  useEffect(() => {
+    if (!isRealtime || !room) return
+
+    loadHistoricalData() // Initial load
+
+    const interval = setInterval(() => {
+      pullRealtimeData()
+    }, 10000) // 10 seconds
+
+    return () => clearInterval(interval)
+  }, [isRealtime, room, roomId])
+
   const toggleDevice = async (deviceId: number) => {
     try {
       const response = await devicesAPI.toggleDevice(deviceId.toString())
@@ -340,6 +388,180 @@ export default function RoomDetailsPage() {
                   <p className="text-xs text-muted-foreground">
                     Cập nhật lúc {new Date(environmentData.timestamp).toLocaleTimeString("vi-VN")}
                   </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Realtime Charts - Last 5 Minutes */}
+        {historicalData.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-foreground">Biểu đồ theo thời gian thực (5 phút gần nhất)</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant={isRealtime ? "default" : "secondary"}>
+                  {isRealtime ? "Đang cập nhật" : "Đã dừng"}
+                </Badge>
+                <Button
+                  onClick={() => setIsRealtime(!isRealtime)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  {isRealtime ? "Tạm dừng" : "Bật realtime"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Temperature Chart */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    <Thermometer className="h-4 w-4 text-red-500" />
+                    Nhiệt độ (°C)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis 
+                        dataKey="timestamp" 
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                        domain={['dataMin - 2', 'dataMax + 2']}
+                      />
+                      <Tooltip 
+                        labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="temperature" 
+                        stroke="#ef4444" 
+                        strokeWidth={2}
+                        dot={{ fill: '#ef4444', r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Humidity Chart */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    <Droplets className="h-4 w-4 text-blue-500" />
+                    Độ ẩm (%)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis 
+                        dataKey="timestamp" 
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip 
+                        labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="humidity" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        dot={{ fill: '#3b82f6', r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Light Level Chart */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-card-foreground flex items-center gap-2">
+                    <Sun className="h-4 w-4 text-yellow-500" />
+                    Độ sáng (lux)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis 
+                        dataKey="timestamp" 
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        stroke="currentColor"
+                        opacity={0.5}
+                        domain={['dataMin - 5', 'dataMax + 5']}
+                      />
+                      <Tooltip 
+                        labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="lightLevel" 
+                        stroke="#eab308" 
+                        strokeWidth={2}
+                        dot={{ fill: '#eab308', r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
