@@ -10,6 +10,9 @@ interface User {
     name: string;
     birthday?: string;
     role?: string;
+    adaUsername?: string;
+    adakey?: string;
+
 }
 
 interface AuthContextType {
@@ -23,6 +26,9 @@ interface AuthContextType {
         password: string;
         name: string;
         birthday?: string;
+        adaUsername: string;
+        adakey: string;
+
     }) => Promise<void>;
     logout: () => void;
     updateProfile: (userData: { name?: string; birthday?: string }) => Promise<void>;

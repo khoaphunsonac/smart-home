@@ -23,12 +23,14 @@ export default function RegisterPage() {
         confirmPassword: "",
         name: "",
         birthday: "",
+        adaUsername: "",
+        adakey: "",
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-
+    const [showApiKey, setShowApiKey] = useState(false);
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -46,6 +48,16 @@ export default function RegisterPage() {
             setLoading(false);
             return;
         }
+        if (!formData.adaUsername.trim()) {
+            setError("Vui lòng nhập Adafruit Username");
+            setLoading(false);
+            return;
+        }
+        if (!formData.adakey.trim()) {
+            setError("Vui lòng nhập Adafruit API Key");
+            setLoading(false);
+            return;
+        }
 
         try {
             await register({
@@ -54,6 +66,8 @@ export default function RegisterPage() {
                 password: formData.password,
                 name: formData.name,
                 birthday: formData.birthday,
+                adaUsername: formData.adaUsername,
+                adakey: formData.adakey,
             });
 
             const newUser = {
@@ -225,7 +239,62 @@ export default function RegisterPage() {
                                     </Button>
                                 </div>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="adaUsername">Adafruit Username *</Label>
+                                <Input
+                                    id="adaUsername"
+                                    name="adaUsername"
+                                    type="text"
+                                    placeholder="Nhập username Adafruit IO"
+                                    value={formData.adaUsername}
+                                    onChange={handleChange}
+                                    required
+                                    className="bg-input border-border font-mono"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Username tài khoản Adafruit IO để kết nối với thiết bị IoT
+                                </p>
+                            </div>
 
+                            <div className="space-y-2">
+                                <Label htmlFor="adakey">Adafruit API Key *</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="adakey"
+                                        name="adakey"
+                                        type={showApiKey ? "text" : "password"}
+                                        placeholder="Nhập API key từ Adafruit IO"
+                                        value={formData.adakey}
+                                        onChange={handleChange}
+                                        required
+                                        className="bg-input border-border font-mono pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                    >
+                                        {showApiKey ? (
+                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">API key bảo mật để xác thực với dịch vụ Adafruit IO</p>
+                            </div>
+
+                            <div className="bg-muted/50 p-4 rounded-lg text-sm">
+                                <h4 className="font-semibold text-card-foreground mb-2">Hướng dẫn lấy thông tin Adafruit IO:</h4>
+                                <ol className="text-muted-foreground space-y-1 list-decimal list-inside">
+                                    <li>Truy cập <span className="font-mono">io.adafruit.com</span></li>
+                                    <li>Đăng nhập hoặc tạo tài khoản miễn phí</li>
+                                    <li>Vào phần "My Key" để lấy Username và API Key</li>
+                                    <li>Sao chép thông tin vào form này</li>
+                                </ol>
+                            </div>
                             <Button type="submit" className="w-full" disabled={loading}>
                                 {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
                             </Button>

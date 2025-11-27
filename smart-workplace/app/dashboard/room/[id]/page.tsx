@@ -280,9 +280,9 @@ export default function RoomDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Adafruit Username:</span>
-                  <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
-                </div><div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Adafruit Username:</span>
+                <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
+              </div><div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">API Key:</span>
                   <span className="font-mono text-card-foreground">
                     {room.adakey ? `${room.adakey.substring(0, 8)}***` : 'Chưa cấu hình'}
