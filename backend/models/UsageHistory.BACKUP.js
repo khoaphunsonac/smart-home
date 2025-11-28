@@ -1,3 +1,4 @@
+// BACKUP: Model hiện tại với field mappings mới
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
@@ -19,13 +20,13 @@ const UsageHistory = sequelize.define('UsageHistory', {
     },
     duration: {
         type: DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false,
         comment: 'Duration in seconds'
     },
     deviceType: {
         type: DataTypes.STRING(50),
         allowNull: false,
-        field: 'deviceType',
+        field: 'device_type',
         comment: 'Type of device (Sensor, Light, AC, etc.)'
     },
     energyConsumed: {
