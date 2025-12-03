@@ -23,14 +23,14 @@ export default function RoomDetailsPage() {
 
   const [user, setUser] = useState<any>(null)
   const [room, setRoom] = useState<any>(null)
-  const [devices, setDevices] = useState<any[]>([])
+  const [feeds, setFeeds] = useState<any[]>([])
   const [environmentData, setEnvironmentData] = useState<any>(null)
-  const [deviceStates, setDeviceStates] = useState<{ [key: number]: boolean }>({})
+  const [feedStates, setFeedStates] = useState<{ [key: string]: any }>({})
   const [syncing, setSyncing] = useState(false)
-  const [generating, setGenerating] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [isRealtime, setIsRealtime] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -41,7 +41,9 @@ export default function RoomDetailsPage() {
 
     const loadRoomData = async () => {
       try {
-        // Get room data with devices
+        setLoading(true)
+        
+        // Get room data
         const roomResponse = await roomsAPI.getRoom(roomId.toString())
         if (!roomResponse.success) {
           router.push("/dashboard")
@@ -51,29 +53,56 @@ export default function RoomDetailsPage() {
         const roomData = roomResponse.data.room
         setRoom(roomData)
 
-        // Set devices from room data (if included) or fetch separately
-        if (roomData.devices && Array.isArray(roomData.devices)) {
-          setDevices(roomData.devices)
+        // Get feeds from Adafruit IO
+        try {
+          const feedsResponse = await adafruitAPI.getFeeds(roomId.toString())
+          if (feedsResponse.success && feedsResponse.data.feeds) {
+            const allFeeds = feedsResponse.data.feeds
+            setFeeds(allFeeds)
 
-          // Initialize device states
-          const initialStates: { [key: number]: boolean } = {}
-          roomData.devices.forEach((device: any) => {
-            initialStates[device.id] = device.isOn
-          })
-          setDeviceStates(initialStates)
-        } else {
-          // Fetch devices separately if not included
-          const devicesResponse = await devicesAPI.getDevices({ room: roomId.toString() })
-          if (devicesResponse.success && Array.isArray(devicesResponse.data.devices)) {
-            setDevices(devicesResponse.data.devices)
-
-            // Initialize device states
-            const initialStates: { [key: number]: boolean } = {}
-            devicesResponse.data.devices.forEach((device: any) => {
-              initialStates[device.id] = device.isOn
-            })
-            setDeviceStates(initialStates)
+            // Initialize feed states from current feed values
+            const initialStates: { [key: string]: any } = {}
+            
+            // Get current values for control feeds
+            const controlFeedKeys = ['v11', 'v13', 'v14', 'v15', 'v16', 'v17']
+            
+            for (const feedKey of controlFeedKeys) {
+              const feed = allFeeds.find((f: any) => f.key.toLowerCase() === feedKey)
+              if (feed) {
+                try {
+                  const feedDataResponse = await adafruitAPI.getFeedData(roomId.toString(), feedKey, { limit: 1 })
+                  if (feedDataResponse.success && feedDataResponse.data.length > 0) {
+                    const currentValue = feedDataResponse.data[0].value
+                    if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
+                      // Toggle feeds - convert to boolean
+                      initialStates[feedKey] = currentValue === '1' || currentValue === 1
+                    } else if (['v14', 'v15'].includes(feedKey)) {
+                      // Slider feeds - keep as number
+                      initialStates[feedKey] = parseInt(currentValue) || 0
+                    }
+                  } else {
+                    // Default values
+                    if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
+                      initialStates[feedKey] = false
+                    } else {
+                      initialStates[feedKey] = 0
+                    }
+                  }
+                } catch (error) {
+                  console.log(`Could not get data for feed ${feedKey}`)
+                  if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
+                    initialStates[feedKey] = false
+                  } else {
+                    initialStates[feedKey] = 0
+                  }
+                }
+              }
+            }
+            
+            setFeedStates(initialStates)
           }
+        } catch (feedError) {
+          console.log("Could not load feeds:", feedError)
         }
 
         // Get environment data
@@ -89,6 +118,8 @@ export default function RoomDetailsPage() {
       } catch (error) {
         console.error("Error loading room data:", error)
         router.push("/dashboard")
+      } finally {
+        setLoading(false)
       }
     }
 
@@ -113,46 +144,62 @@ export default function RoomDetailsPage() {
     }
   }, [searchParams])
 
-  const handleSyncDevices = async () => {
+  const loadFeeds = async () => {
     setSyncing(true)
     setSyncMessage(null)
     
     try {
-      const response = await adafruitAPI.syncDevices(roomId.toString())
-      
-      if (response.success) {
-        const { createdDevices, deletedDevices, totalFeeds } = response.data
+      const feedsResponse = await adafruitAPI.getFeeds(roomId.toString())
+      if (feedsResponse.success && feedsResponse.data.feeds) {
+        const allFeeds = feedsResponse.data.feeds
+        setFeeds(allFeeds)
         
-        // Reload devices
-        const devicesResponse = await devicesAPI.getDevices({ room: roomId.toString() })
-        if (devicesResponse.success && Array.isArray(devicesResponse.data.devices)) {
-          setDevices(devicesResponse.data.devices)
-          
-          // Update device states
-          const initialStates: { [key: number]: boolean } = {}
-          devicesResponse.data.devices.forEach((device: any) => {
-            initialStates[device.id] = device.isOn
-          })
-          setDeviceStates(initialStates)
+        // Reload feed states
+        const initialStates: { [key: string]: any } = {}
+        const controlFeedKeys = ['v11', 'v13', 'v14', 'v15', 'v16', 'v17']
+        
+        for (const feedKey of controlFeedKeys) {
+          const feed = allFeeds.find((f: any) => f.key.toLowerCase() === feedKey)
+          if (feed) {
+            try {
+              const feedDataResponse = await adafruitAPI.getFeedData(roomId.toString(), feedKey, { limit: 1 })
+              if (feedDataResponse.success && feedDataResponse.data.length > 0) {
+                const currentValue = feedDataResponse.data[0].value
+                if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
+                  initialStates[feedKey] = currentValue === '1' || currentValue === 1
+                } else if (['v14', 'v15'].includes(feedKey)) {
+                  initialStates[feedKey] = parseInt(currentValue) || 0
+                }
+              }
+            } catch (error) {
+              if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
+                initialStates[feedKey] = false
+              } else {
+                initialStates[feedKey] = 0
+              }
+            }
+          }
         }
+        
+        setFeedStates(initialStates)
         
         setSyncMessage({
           type: 'success',
-          text: `Đã đồng bộ ${createdDevices} thiết bị từ ${totalFeeds} feeds trên Adafruit IO!`
+          text: `Đã tải thành công ${allFeeds.length} feeds từ Adafruit IO!`
         })
         setTimeout(() => setSyncMessage(null), 5000)
       } else {
         setSyncMessage({
           type: 'error',
-          text: response.message || 'Không thể đồng bộ thiết bị từ Adafruit IO'
+          text: 'Không thể tải feeds từ Adafruit IO'
         })
         setTimeout(() => setSyncMessage(null), 5000)
       }
     } catch (error: any) {
-      console.error("Error syncing devices:", error)
+      console.error("Error loading feeds:", error)
       setSyncMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Có lỗi xảy ra khi đồng bộ thiết bị'
+        text: error.response?.data?.message || 'Có lỗi xảy ra khi tải feeds'
       })
       setTimeout(() => setSyncMessage(null), 5000)
     }
@@ -160,43 +207,7 @@ export default function RoomDetailsPage() {
     setSyncing(false)
   }
 
-  const handleGenerateMockData = async () => {
-    setGenerating(true)
-    setSyncMessage(null)
-    
-    try {
-      const response = await environmentAPI.generateMockData(roomId.toString(), 20)
-      
-      if (response.success) {
-        // Reload environment data
-        const envResponse = await environmentAPI.getLatestEnvironmentData(roomId.toString())
-        if (envResponse.success) {
-          setEnvironmentData(envResponse.data.environmentData)
-        }
-        
-        setSyncMessage({
-          type: 'success',
-          text: `Đã tạo ${response.data.count} bản ghi dữ liệu môi trường mẫu!`
-        })
-        setTimeout(() => setSyncMessage(null), 5000)
-      } else {
-        setSyncMessage({
-          type: 'error',
-          text: response.message || 'Không thể tạo dữ liệu mẫu'
-        })
-        setTimeout(() => setSyncMessage(null), 5000)
-      }
-    } catch (error: any) {
-      console.error("Error generating mock data:", error)
-      setSyncMessage({
-        type: 'error',
-        text: error.response?.data?.message || 'Có lỗi xảy ra khi tạo dữ liệu mẫu'
-      })
-      setTimeout(() => setSyncMessage(null), 5000)
-    }
-    
-    setGenerating(false)
-  }
+
 
   // Pull realtime data from Adafruit IO
   const pullRealtimeData = async () => {
@@ -243,22 +254,37 @@ export default function RoomDetailsPage() {
     return () => clearInterval(interval)
   }, [isRealtime, room, roomId])
 
-  const toggleDevice = async (deviceId: number) => {
+  const toggleFeed = async (feedKey: string) => {
     try {
-      const response = await devicesAPI.toggleDevice(deviceId.toString())
+      const newValue = feedStates[feedKey] ? '0' : '1'
+      const response = await adafruitAPI.sendData(roomId.toString(), { feedKey, value: newValue })
       if (response.success) {
-        setDeviceStates((prev) => ({
+        setFeedStates((prev: any) => ({
           ...prev,
-          [deviceId]: !prev[deviceId],
+          [feedKey]: !prev[feedKey],
         }))
       }
     } catch (error) {
-      console.error("Error toggling device:", error)
+      console.error(`Error toggling feed ${feedKey}:`, error)
       // Fallback to local state update if API fails
-      setDeviceStates((prev) => ({
+      setFeedStates((prev: any) => ({
         ...prev,
-        [deviceId]: !prev[deviceId],
+        [feedKey]: !prev[feedKey],
       }))
+    }
+  }
+
+  const updateSliderFeed = async (feedKey: string, value: number) => {
+    try {
+      const response = await adafruitAPI.sendData(roomId.toString(), { feedKey, value: value.toString() })
+      if (response.success) {
+        setFeedStates((prev: any) => ({
+          ...prev,
+          [feedKey]: value,
+        }))
+      }
+    } catch (error) {
+      console.error(`Error updating feed ${feedKey}:`, error)
     }
   }
 
@@ -568,158 +594,177 @@ export default function RoomDetailsPage() {
           </div>
         )}
 
-        {/* Device Control Section */}
+        {/* Feed Control Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">Điều khiển thiết bị</h2>
             <div className="flex items-center gap-2">
               <Button 
-                onClick={handleGenerateMockData} 
-                disabled={generating}
-                variant="outline"
-                className="flex items-center gap-2 border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
-              >
-                <Beaker className={`w-4 h-4 ${generating ? 'animate-pulse' : ''}`} />
-                {generating ? 'Đang tạo...' : 'Tạo dữ liệu mẫu'}
-              </Button>
-              <Button 
-                onClick={handleSyncDevices} 
+                onClick={loadFeeds} 
                 disabled={syncing}
                 variant="outline"
                 className="flex items-center gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Đang đồng bộ...' : 'Đồng bộ từ Adafruit IO'}
+                {syncing ? 'Đang tải...' : 'Tải lại feeds'}
               </Button>
             </div>
           </div>
-          {devices.length === 0 ? (
+          
+          {loading ? (
+            <Card className="bg-card border-border">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+              </CardContent>
+            </Card>
+          ) : feeds.length === 0 ? (
             <Card className="bg-card border-border">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Settings className="w-12 h-12 text-muted-foreground mb-4" />
-                <h4 className="text-lg font-semibold text-card-foreground mb-2">Chưa có thiết bị</h4>
+                <h4 className="text-lg font-semibold text-card-foreground mb-2">Chưa có feeds</h4>
                 <p className="text-muted-foreground text-center mb-4">
-                  Phòng này chưa có thiết bị nào được kết nối.
+                  Phòng này chưa có feeds nào từ Adafruit IO.
                 </p>
                 <Button 
-                  onClick={handleSyncDevices} 
+                  onClick={loadFeeds} 
                   disabled={syncing}
                   className="flex items-center gap-2"
                 >
                   <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                  {syncing ? 'Đang đồng bộ...' : 'Đồng bộ thiết bị từ Adafruit IO'}
+                  {syncing ? 'Đang tải...' : 'Tải feeds từ Adafruit IO'}
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {devices.map((device) => {
-                const isSensor = device.feedKey && ['v1', 'v2', 'v3'].includes(device.feedKey.toLowerCase())
-                
-                return (
-                  <Card key={device.id} className="bg-card border-border">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`p-2 rounded-lg ${!isSensor && deviceStates[device.id] ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-                          >
-                            {getDeviceIcon(device.type, device.feedKey)}
-                          </div>
-                          <div>
-                            <CardTitle className="text-card-foreground">{device.name}</CardTitle>
-                            <CardDescription>
-                              {device.feedKey ? `${device.type} (${device.feedKey})` : device.type}
-                            </CardDescription>
-                          </div>
+              {/* Sensor Feeds (v1, v2, v3) - Read Only */}
+              {feeds.filter((feed: any) => ['v1', 'v2', 'v3'].includes(feed.key.toLowerCase())).map((feed: any) => (
+                <Card key={feed.id} className="bg-card border-border">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                          {feed.key.toLowerCase() === 'v1' && <Thermometer className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v2' && <Droplets className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v3' && <Sun className="w-5 h-5" />}
                         </div>
-                        {!isSensor && (
-                          <Switch checked={deviceStates[device.id]} onCheckedChange={() => toggleDevice(device.id)} />
-                        )}
-                        {isSensor && (
-                          <Badge variant="secondary">Cảm biến</Badge>
-                        )}
+                        <div>
+                          <CardTitle className="text-card-foreground">{feed.name}</CardTitle>
+                          <CardDescription>{feed.key}</CardDescription>
+                        </div>
                       </div>
-                    </CardHeader>
+                      <Badge variant="secondary">Cảm biến</Badge>
+                    </div>
+                  </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {/* Sensor devices - show read-only value */}
-                      {isSensor ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Giá trị:</span>
-                            <span className="text-lg font-bold text-card-foreground">
-                              {device.feedKey?.toLowerCase() === 'v1' && environmentData?.temperature && `${environmentData.temperature}°C`}
-                              {device.feedKey?.toLowerCase() === 'v2' && environmentData?.humidity && `${environmentData.humidity}%`}
-                              {device.feedKey?.toLowerCase() === 'v3' && environmentData?.lightLevel && `${environmentData.lightLevel} lux`}
-                              {!environmentData && 'Đang đọc...'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Cảm biến tự động cập nhật mỗi 10 giây
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Trạng thái:</span>
-                            <Badge variant={deviceStates[device.id] ? "default" : "secondary"}>
-                              {deviceStates[device.id] ? "Bật" : "Tắt"}
-                            </Badge>
-                          </div>
-
-                          {/* Fan (V12) with speed control */}
-                          {device.feedKey?.toLowerCase().includes('v12') && deviceStates[device.id] && (
-                            <div className="space-y-2">
-                              <label className="text-sm text-muted-foreground">Tốc độ (%)</label>
-                              <Slider defaultValue={[70]} min={0} max={100} step={10} className="w-full" />
-                              <p className="text-xs text-muted-foreground">Điều khiển qua feed V14</p>
-                            </div>
-                          )}
-
-                          {/* Sprayer (V10) with intensity control */}
-                          {device.feedKey?.toLowerCase().includes('v10') && deviceStates[device.id] && (
-                            <div className="space-y-2">
-                              <label className="text-sm text-muted-foreground">Cường độ (%)</label>
-                              <Slider defaultValue={[70]} min={0} max={100} step={10} className="w-full" />
-                              <p className="text-xs text-muted-foreground">Điều khiển qua feed V15</p>
-                            </div>
-                          )}
-
-                          {/* RGB LEDs (V16-V19) with color indicator */}
-                          {device.feedKey && ['v16', 'v17', 'v18', 'v19'].includes(device.feedKey.toLowerCase()) && deviceStates[device.id] && (
-                            <div className="space-y-2">
-                              <label className="text-sm text-muted-foreground">Màu LED</label>
-                              <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full border-2 ${
-                                  device.feedKey.toLowerCase() === 'v16' ? 'bg-red-500' :
-                                  device.feedKey.toLowerCase() === 'v17' ? 'bg-purple-500' :
-                                  device.feedKey.toLowerCase() === 'v18' ? 'bg-orange-500' :
-                                  'bg-blue-500'
-                                }`}></div>
-                                <span className="text-sm">
-                                  {device.feedKey.toLowerCase() === 'v16' && 'Đỏ'}
-                                  {device.feedKey.toLowerCase() === 'v17' && 'Tím'}
-                                  {device.feedKey.toLowerCase() === 'v18' && 'Cam'}
-                                  {device.feedKey.toLowerCase() === 'v19' && 'Xanh dương'}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Main Light (V11) */}
-                          {device.feedKey?.toLowerCase().includes('v11') && deviceStates[device.id] && (
-                            <div className="space-y-2">
-                              <p className="text-xs text-muted-foreground">Đèn chính (RGB LED 0)</p>
-                            </div>
-                          )}
-                        </>
-                      )}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Giá trị:</span>
+                        <span className="text-lg font-bold text-card-foreground">
+                          {feed.key.toLowerCase() === 'v1' && environmentData?.temperature && `${environmentData.temperature}°C`}
+                          {feed.key.toLowerCase() === 'v2' && environmentData?.humidity && `${environmentData.humidity}%`}
+                          {feed.key.toLowerCase() === 'v3' && environmentData?.lightLevel && `${environmentData.lightLevel} lux`}
+                          {!environmentData && 'Đang đọc...'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Cảm biến tự động cập nhật mỗi 10 giây
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                )
-              })}
+              ))}
+              
+              {/* Toggle Control Feeds (v11, v13, v16, v17) */}
+              {feeds.filter((feed: any) => ['v11', 'v13', 'v16', 'v17'].includes(feed.key.toLowerCase())).map((feed: any) => (
+                <Card key={feed.id} className="bg-card border-border">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`p-2 rounded-lg ${feedStates[feed.key.toLowerCase()] ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                        >
+                          {feed.key.toLowerCase() === 'v11' && <Lightbulb className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v13' && <Wind className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v16' && <Lightbulb className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v17' && <Lightbulb className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <CardTitle className="text-card-foreground">{feed.name}</CardTitle>
+                          <CardDescription>{feed.key}</CardDescription>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={feedStates[feed.key.toLowerCase()] || false} 
+                        onCheckedChange={() => toggleFeed(feed.key.toLowerCase())} 
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Trạng thái:</span>
+                        <Badge variant={feedStates[feed.key.toLowerCase()] ? "default" : "secondary"}>
+                          {feedStates[feed.key.toLowerCase()] ? "Bật" : "Tắt"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {feed.key.toLowerCase() === 'v11' && 'Đèn chính'}
+                        {feed.key.toLowerCase() === 'v13' && 'Quạt thông gió'}
+                        {feed.key.toLowerCase() === 'v16' && 'Đèn LED đỏ'}
+                        {feed.key.toLowerCase() === 'v17' && 'Đèn LED tím'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {/* Slider Control Feeds (v14, v15) */}
+              {feeds.filter((feed: any) => ['v14', 'v15'].includes(feed.key.toLowerCase())).map((feed: any) => (
+                <Card key={feed.id} className="bg-card border-border">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+                          {feed.key.toLowerCase() === 'v14' && <Wind className="w-5 h-5" />}
+                          {feed.key.toLowerCase() === 'v15' && <Droplets className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <CardTitle className="text-card-foreground">{feed.name}</CardTitle>
+                          <CardDescription>{feed.key}</CardDescription>
+                        </div>
+                      </div>
+                      <Badge variant="default">Slider</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          {feed.key.toLowerCase() === 'v14' ? 'Tốc độ quạt:' : 'Cường độ phun:'}
+                        </span>
+                        <span className="text-lg font-bold text-card-foreground">
+                          {feedStates[feed.key.toLowerCase()] || 0}%
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <Slider 
+                          value={[feedStates[feed.key.toLowerCase()] || 0]} 
+                          onValueChange={(value) => updateSliderFeed(feed.key.toLowerCase(), value[0])}
+                          min={0} 
+                          max={100} 
+                          step={10} 
+                          className="w-full" 
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {feed.key.toLowerCase() === 'v14' ? 'Tốc độ quạt (0-100%)' : 'Cường độ phun sương (0-100%)'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
@@ -743,8 +788,8 @@ export default function RoomDetailsPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Số thiết bị:</span>
-                  <span className="text-card-foreground">{devices.length} thiết bị</span>
+                  <span className="text-sm text-muted-foreground">Số feeds:</span>
+                  <span className="text-card-foreground">{feeds.length} feeds</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Trạng thái kết nối:</span>
