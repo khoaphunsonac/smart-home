@@ -1,3 +1,4 @@
+// ...existing code...
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, Plus, Eye, LogOut, Users, Thermometer } from "lucide-react";
+import { Home, Plus, Eye, LogOut, Users, Thermometer, ChevronDown, ChevronUp, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { roomsAPI } from "@/lib/api";
+import { roomsAPI, usageHistoryAPI } from "@/lib/api";
 
 interface Room {
     id: string;
@@ -28,6 +29,11 @@ export default function DashboardPage() {
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [error, setError] = useState("");
 
+    // Added state for usage history
+    const [usageHistory, setUsageHistory] = useState<any[]>([]);
+    const [loadingUsage, setLoadingUsage] = useState(false);
+    const [expandedUsage, setExpandedUsage] = useState(false);
+
     useEffect(() => {
         // Chỉ redirect khi loading hoàn tất và chắc chắn không có user
         if (!loading && !user) {
@@ -44,20 +50,56 @@ export default function DashboardPage() {
     const loadRooms = async () => {
         try {
             setLoadingRooms(true);
-            const response = await roomsAPI.getRooms();
-            console.log("Dashboard: API response:", response);
+            // roomsAPI.getRooms() trả về response.data (the parsed payload)
+            const result = await roomsAPI.getRooms();
+            console.log("Dashboard: getRooms result:", result);
 
-            // Backend trả về: { success: true, data: { rooms: [...], pagination: {...} } }
-            const rooms = response.data?.data?.rooms || response.data?.rooms || [];
+            // Hỗ trợ nhiều dạng payload:
+            // - { success: true, data: { rooms: [...] } }
+            // - { success: true, rooms: [...] }
+            // - trực tiếp mảng [...]
+            const payload = result ?? {};
+            const rooms =
+                payload?.data?.rooms ||
+                payload?.rooms ||
+                (Array.isArray(payload) ? payload : []) ||
+                [];
+
             console.log("Dashboard: Extracted rooms:", rooms);
-
             setUserRooms(Array.isArray(rooms) ? rooms : []);
+
+            // Load usage history for all rooms
+            await loadUsageHistory();
         } catch (error: any) {
             console.error("Dashboard: Load rooms error:", error);
             setError(error.response?.data?.message || "Lỗi khi tải danh sách phòng");
-            setUserRooms([]); // Set empty array on error
+            setUserRooms([]);
         } finally {
             setLoadingRooms(false);
+        }
+    };
+
+    const loadUsageHistory = async () => {
+        try {
+            setLoadingUsage(true);
+            console.log("Dashboard: Loading usage history for all rooms");
+
+            // Không filter theo room_id - lấy tất cả usage history của user
+            const payload = await usageHistoryAPI.getUsageHistory({ limit: 10 });
+            // API backend trả về: { success: true, data: { usageHistory, pagination } }
+            const items =
+                payload?.data?.usageHistory ||
+                payload?.usageHistory ||
+                (Array.isArray(payload) ? payload : []) ||
+                [];
+
+            console.log("Dashboard: usage history items loaded:", items.length, items);
+            setUsageHistory(Array.isArray(items) ? items : []);
+        } catch (err) {
+            console.error("Dashboard: Load usage history error:", err);
+            setUsageHistory([]);
+        } finally {
+            setLoadingUsage(false);
         }
     };
 
@@ -167,7 +209,94 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
-                {/* Historical Use */}
+
+                {/* Usage History - Compact View */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-foreground">Lịch sử sử dụng thiết bị</h3>
+                        {usageHistory.length > 3 && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setExpandedUsage(!expandedUsage)}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                {expandedUsage ? (
+                                    <>
+                                        <ChevronUp className="w-4 h-4 mr-1" />
+                                        Thu gọn
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronDown className="w-4 h-4 mr-1" />
+                                        Xem tất cả ({usageHistory.length})
+                                    </>
+                                )}
+                            </Button>
+                        )}
+                    </div>
+                    <Card className="bg-card border-border">
+                        <CardContent className="p-0">
+                            {loadingUsage ? (
+                                <div className="p-6 text-center">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                    <p className="text-sm text-muted-foreground">Đang tải lịch sử...</p>
+                                </div>
+                            ) : !usageHistory || usageHistory.length === 0 ? (
+                                <div className="p-6 text-center">
+                                    <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                    <p className="text-sm text-muted-foreground">Chưa có bản ghi sử dụng thiết bị nào.</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-border">
+                                    {(expandedUsage ? usageHistory : usageHistory.slice(0, 3)).map((u, idx) => (
+                                        <div 
+                                            key={u.id} 
+                                            className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                                        >
+                                            <div className="flex items-center space-x-3 flex-1">
+                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                                    <Zap className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-card-foreground truncate">
+                                                            {u.deviceType || u.device_type || 'Unknown'}
+                                                        </span>
+                                                        {u.room?.name && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {u.room.name}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            {u.duration ? `${u.duration}s` : '-'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Zap className="w-3 h-3" />
+                                                            {u.energyConsumed !== undefined ? `${u.energyConsumed} kWh` : '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right text-xs text-muted-foreground ml-4 flex-shrink-0">
+                                                {u.usageDate ? new Date(u.usageDate).toLocaleDateString('vi-VN', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }) : '-'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
                 {/* Rooms Section */}
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-bold text-foreground">Danh sách phòng</h3>
@@ -244,3 +373,4 @@ export default function DashboardPage() {
         </div>
     );
 }
+// ...existing code...
