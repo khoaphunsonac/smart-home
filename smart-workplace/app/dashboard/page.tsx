@@ -1,4 +1,3 @@
-// ...existing code...
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, Plus, Eye, LogOut, Users, Thermometer, ChevronDown, ChevronUp, Clock, Zap } from "lucide-react";
+import { Home, Plus, Eye, LogOut, Users, Thermometer, ChevronDown, ChevronUp, Clock, Zap, Bell } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { roomsAPI, usageHistoryAPI } from "@/lib/api";
+import { roomsAPI, usageHistoryAPI, notificationsAPI } from "@/lib/api";
 
 interface Room {
     id: string;
@@ -34,6 +33,11 @@ export default function DashboardPage() {
     const [loadingUsage, setLoadingUsage] = useState(false);
     const [expandedUsage, setExpandedUsage] = useState(false);
 
+    // State for notifications
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const [expandedNotifications, setExpandedNotifications] = useState(false);
+
     useEffect(() => {
         // Chỉ redirect khi loading hoàn tất và chắc chắn không có user
         if (!loading && !user) {
@@ -50,9 +54,7 @@ export default function DashboardPage() {
     const loadRooms = async () => {
         try {
             setLoadingRooms(true);
-            // roomsAPI.getRooms() trả về response.data (the parsed payload)
             const result = await roomsAPI.getRooms();
-            console.log("Dashboard: getRooms result:", result);
 
             // Hỗ trợ nhiều dạng payload:
             // - { success: true, data: { rooms: [...] } }
@@ -65,13 +67,11 @@ export default function DashboardPage() {
                 (Array.isArray(payload) ? payload : []) ||
                 [];
 
-            console.log("Dashboard: Extracted rooms:", rooms);
             setUserRooms(Array.isArray(rooms) ? rooms : []);
 
-            // Load usage history for all rooms
-            await loadUsageHistory();
+            // Load usage history and notifications
+            await Promise.all([loadUsageHistory(), loadNotifications()]);
         } catch (error: any) {
-            console.error("Dashboard: Load rooms error:", error);
             setError(error.response?.data?.message || "Lỗi khi tải danh sách phòng");
             setUserRooms([]);
         } finally {
@@ -82,24 +82,43 @@ export default function DashboardPage() {
     const loadUsageHistory = async () => {
         try {
             setLoadingUsage(true);
-            console.log("Dashboard: Loading usage history for all rooms");
-
-            // Không filter theo room_id - lấy tất cả usage history của user
             const payload = await usageHistoryAPI.getUsageHistory({ limit: 10 });
-            // API backend trả về: { success: true, data: { usageHistory, pagination } }
             const items =
                 payload?.data?.usageHistory ||
                 payload?.usageHistory ||
                 (Array.isArray(payload) ? payload : []) ||
                 [];
-
-            console.log("Dashboard: usage history items loaded:", items.length, items);
             setUsageHistory(Array.isArray(items) ? items : []);
         } catch (err) {
-            console.error("Dashboard: Load usage history error:", err);
             setUsageHistory([]);
         } finally {
             setLoadingUsage(false);
+        }
+    };
+
+    const loadNotifications = async () => {
+        try {
+            setLoadingNotifications(true);
+            const payload = await notificationsAPI.getNotifications({ limit: 10 });
+            const items =
+                payload?.data?.notifications ||
+                payload?.notifications ||
+                (Array.isArray(payload) ? payload : []) ||
+                [];
+            setNotifications(Array.isArray(items) ? items : []);
+        } catch (err) {
+            setNotifications([]);
+        } finally {
+            setLoadingNotifications(false);
+        }
+    };
+
+    const markNotificationAsRead = async (id: string) => {
+        try {
+            await notificationsAPI.markAsRead(id);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        } catch (err) {
+            // Handle error silently
         }
     };
 
@@ -210,91 +229,170 @@ export default function DashboardPage() {
                     </Card>
                 </div>
 
-                {/* Usage History - Compact View */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-semibold text-foreground">Lịch sử sử dụng thiết bị</h3>
-                        {usageHistory.length > 3 && (
-                            <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => setExpandedUsage(!expandedUsage)}
-                                className="text-muted-foreground hover:text-foreground"
-                            >
-                                {expandedUsage ? (
-                                    <>
-                                        <ChevronUp className="w-4 h-4 mr-1" />
-                                        Thu gọn
-                                    </>
-                                ) : (
-                                    <>
-                                        <ChevronDown className="w-4 h-4 mr-1" />
-                                        Xem tất cả ({usageHistory.length})
-                                    </>
-                                )}
-                            </Button>
-                        )}
-                    </div>
-                    <Card className="bg-card border-border">
-                        <CardContent className="p-0">
-                            {loadingUsage ? (
-                                <div className="p-6 text-center">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                                    <p className="text-sm text-muted-foreground">Đang tải lịch sử...</p>
-                                </div>
-                            ) : !usageHistory || usageHistory.length === 0 ? (
-                                <div className="p-6 text-center">
-                                    <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">Chưa có bản ghi sử dụng thiết bị nào.</p>
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-border">
-                                    {(expandedUsage ? usageHistory : usageHistory.slice(0, 3)).map((u, idx) => (
-                                        <div 
-                                            key={u.id} 
-                                            className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between"
-                                        >
-                                            <div className="flex items-center space-x-3 flex-1">
-                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                    <Zap className="w-5 h-5 text-primary" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium text-card-foreground truncate">
-                                                            {u.deviceType || u.device_type || 'Unknown'}
-                                                        </span>
-                                                        {u.room?.name && (
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {u.room.name}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                                        <span className="flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" />
-                                                            {u.duration ? `${u.duration}s` : '-'}
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Zap className="w-3 h-3" />
-                                                            {u.energyConsumed !== undefined ? `${u.energyConsumed} kWh` : '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right text-xs text-muted-foreground ml-4 flex-shrink-0">
-                                                {u.usageDate ? new Date(u.usageDate).toLocaleDateString('vi-VN', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                }) : '-'}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                {/* Usage History & Notifications - 2 Column Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Usage History */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-semibold text-foreground">Lịch sử sử dụng</h3>
+                            {usageHistory.length > 3 && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setExpandedUsage(!expandedUsage)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    {expandedUsage ? (
+                                        <>
+                                            <ChevronUp className="w-4 h-4 mr-1" />
+                                            Thu gọn
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ChevronDown className="w-4 h-4 mr-1" />
+                                            Xem tất cả ({usageHistory.length})
+                                        </>
+                                    )}
+                                </Button>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <Card className="bg-card border-border">
+                            <CardContent className="p-0">
+                                {loadingUsage ? (
+                                    <div className="p-6 text-center">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                        <p className="text-sm text-muted-foreground">Đang tải...</p>
+                                    </div>
+                                ) : !usageHistory || usageHistory.length === 0 ? (
+                                    <div className="p-6 text-center">
+                                        <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                        <p className="text-sm text-muted-foreground">Chưa có lịch sử</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-border">
+                                        {(expandedUsage ? usageHistory : usageHistory.slice(0, 3)).map((u) => (
+                                            <div 
+                                                key={u.id} 
+                                                className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                                            >
+                                                <div className="flex items-center space-x-3 flex-1">
+                                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                                        <Zap className="w-5 h-5 text-primary" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium text-card-foreground truncate">
+                                                                {u.deviceType || u.device_type || 'Unknown'}
+                                                            </span>
+                                                            {u.room?.name && (
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {u.room.name}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" />
+                                                                {u.duration ? `${u.duration}s` : '-'}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <Zap className="w-3 h-3" />
+                                                                {u.energyConsumed !== undefined ? `${u.energyConsumed} kWh` : '-'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right text-xs text-muted-foreground ml-4 flex-shrink-0">
+                                                    {u.usageDate ? new Date(u.usageDate).toLocaleDateString('vi-VN', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    }) : '-'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Notifications */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-semibold text-foreground">Thông báo</h3>
+                            {notifications.length > 3 && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setExpandedNotifications(!expandedNotifications)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    {expandedNotifications ? (
+                                        <>
+                                            <ChevronUp className="w-4 h-4 mr-1" />
+                                            Thu gọn
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ChevronDown className="w-4 h-4 mr-1" />
+                                            Xem tất cả ({notifications.length})
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
+                        <Card className="bg-card border-border">
+                            <CardContent className="p-0">
+                                {loadingNotifications ? (
+                                    <div className="p-6 text-center">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                        <p className="text-sm text-muted-foreground">Đang tải...</p>
+                                    </div>
+                                ) : !notifications || notifications.length === 0 ? (
+                                    <div className="p-6 text-center">
+                                        <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                        <p className="text-sm text-muted-foreground">Chưa có thông báo</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-border">
+                                        {(expandedNotifications ? notifications : notifications.slice(0, 3)).map((n) => (
+                                            <div 
+                                                key={n.id} 
+                                                className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
+                                                onClick={() => !n.isRead && markNotificationAsRead(n.id.toString())}
+                                            >
+                                                <div className="flex items-start space-x-3">
+                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${!n.isRead ? 'bg-primary/10' : 'bg-muted'}`}>
+                                                        <Bell className={`w-5 h-5 ${!n.isRead ? 'text-primary' : 'text-muted-foreground'}`} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-sm font-medium truncate ${!n.isRead ? 'text-card-foreground' : 'text-muted-foreground'}`}>
+                                                                {n.message}
+                                                            </span>
+                                                            {!n.isRead && (
+                                                                <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0"></div>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-1">
+                                                            {n.timestamp ? new Date(n.timestamp).toLocaleDateString('vi-VN', {
+                                                                day: '2-digit',
+                                                                month: '2-digit',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            }) : '-'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
 
                 {/* Rooms Section */}
@@ -373,4 +471,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-// ...existing code...
