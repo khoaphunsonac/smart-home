@@ -19,7 +19,7 @@ router.get('/', validatePagination, async (req, res) => {
 
         const notifications = await Notification.findAll({
             where: { user_id: req.user.id },
-            order: [['createdAt', 'DESC']],
+            order: [['timestamp', 'DESC']],
             offset: skip,
             limit: limit
         });
