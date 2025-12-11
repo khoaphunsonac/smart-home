@@ -24,27 +24,41 @@ const app = express();
 // Connect to Database
 connectDB();
 
+// CORS configuration - MUST BE FIRST before other middleware
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: [
+        "Content-Type", 
+        "Authorization", 
+        "X-Requested-With",
+        "Accept",
+        "Cache-Control",
+        "Pragma"
+    ],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    optionsSuccessStatus: 200,
+    maxAge: 86400, // 24 hours
+};
+
+app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for preflight requests
+app.options("*", cors(corsOptions));
+
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+// Rate limiting - More lenient in development
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+    max: process.env.NODE_ENV === 'development' 
+        ? 1000 // 1000 requests per 15 mins in dev
+        : (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100), // 100 in production
     message: "Too many requests from this IP, please try again later.",
 });
 app.use(limiter);
-
-// CORS configuration
-app.use(
-    cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-        optionsSuccessStatus: 200,
-    })
-);
 
 // Compression middleware
 app.use(compression());

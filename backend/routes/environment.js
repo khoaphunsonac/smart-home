@@ -1,5 +1,5 @@
 const express = require("express");
-const { EnvironmentData, Room, User } = require("../models");
+const { EnvironmentData, Room, User, Notification } = require("../models");
 const { authenticateToken } = require("../middleware/auth");
 const { validatePagination, validateRoomId } = require("../middleware/validation");
 const AdafruitService = require("../utils/adafruit");
@@ -122,6 +122,54 @@ router.post("/:roomId", validateRoomId, async (req, res) => {
             timestamp: new Date(),
         });
 
+        // Kiểm tra ngưỡng an toàn và tạo notification nếu vượt ngưỡng
+        const notifications = [];
+
+        // Nhiệt độ > 28°C
+        if (temperature !== null && temperature !== undefined && temperature > 28) {
+            try {
+                const notification = await Notification.create({
+                    message: `Nhiệt độ trong ${room.name} cao bất thường: ${temperature.toFixed(1)}°C (ngưỡng an toàn: ≤ 28°C)`,
+                    user_id: req.user.id,
+                    timestamp: new Date(),
+                    isRead: false
+                });
+                notifications.push({ type: 'temperature', value: temperature, notification });
+            } catch (error) {
+                console.error('Failed to create temperature notification:', error);
+            }
+        }
+
+        // Độ ẩm < 80%
+        if (humidity !== null && humidity !== undefined && humidity < 80) {
+            try {
+                const notification = await Notification.create({
+                    message: `Độ ẩm trong ${room.name} thấp bất thường: ${humidity.toFixed(1)}% (ngưỡng an toàn: ≥ 80%)`,
+                    user_id: req.user.id,
+                    timestamp: new Date(),
+                    isRead: false
+                });
+                notifications.push({ type: 'humidity', value: humidity, notification });
+            } catch (error) {
+                console.error('Failed to create humidity notification:', error);
+            }
+        }
+
+        // Ánh sáng < 50 lux
+        if (lightLevel !== null && lightLevel !== undefined && lightLevel < 50) {
+            try {
+                const notification = await Notification.create({
+                    message: `Cường độ ánh sáng trong ${room.name} thấp bất thường: ${lightLevel.toFixed(0)} lux (ngưỡng an toàn: ≥ 50 lux)`,
+                    user_id: req.user.id,
+                    timestamp: new Date(),
+                    isRead: false
+                });
+                notifications.push({ type: 'lightLevel', value: lightLevel, notification });
+            } catch (error) {
+                console.error('Failed to create light notification:', error);
+            }
+        }
+
         // Lấy user để lấy credentials từ user
         const user = await User.findByPk(req.user.id);
 
@@ -154,7 +202,10 @@ router.post("/:roomId", validateRoomId, async (req, res) => {
         res.status(201).json({
             success: true,
             message: "Environment data created successfully",
-            data: { environmentData },
+            data: { 
+                environmentData,
+                notificationsCreated: notifications.length > 0 ? notifications : undefined
+            },
         });
     } catch (error) {
         res.status(500).json({
