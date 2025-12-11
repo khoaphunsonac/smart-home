@@ -31,28 +31,8 @@ export default function RoomDetailsPage() {
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [isRealtime, setIsRealtime] = useState(true)
   const [loading, setLoading] = useState(false)
-  const getDeviceTypeFromFeed = (feedKey: string) => {
-    const key = feedKey.toLowerCase()
-    if (key === 'v11' || key === 'v16' || key === 'v17') return 'Light'
-    if (key === 'v13' || key === 'v14') return 'Fan'
-    if (key === 'v15') return 'Sprayer'
-    return 'Unknown'
-  }
+  const [deviceStartTimes, setDeviceStartTimes] = useState<{ [key: string]: Date }>({})
 
-  // Ghi lịch sử sử dụng khi người dùng thao tác (button/slider)
-  const recordUsageHistory = async (roomIdParam: number, feedKey: string) => {
-    try {
-      const deviceType = getDeviceTypeFromFeed(feedKey)
-      await usageHistoryAPI.createUsageHistory({
-        room_id: roomIdParam,
-        deviceType,
-        duration: 0,
-        energyConsumed: 0
-      })
-    } catch (e) {
-      console.warn('recordUsageHistory failed:', e)
-    }
-  }
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -110,7 +90,6 @@ export default function RoomDetailsPage() {
                     }
                   }
                 } catch (error) {
-                  console.log(`Could not get data for feed ${feedKey}`)
                   if (['v11', 'v13', 'v16', 'v17'].includes(feedKey)) {
                     initialStates[feedKey] = false
                   } else {
@@ -123,7 +102,7 @@ export default function RoomDetailsPage() {
             setFeedStates(initialStates)
           }
         } catch (feedError) {
-          console.log("Could not load feeds:", feedError)
+          // Feed loading error handled silently
         }
 
         // Get environment data
@@ -133,7 +112,7 @@ export default function RoomDetailsPage() {
             setEnvironmentData(envResponse.data.environmentData)
           }
         } catch (envError) {
-          console.log("No environment data available for this room")
+          // No environment data available
         }
 
       } catch (error) {
@@ -275,17 +254,62 @@ export default function RoomDetailsPage() {
     return () => clearInterval(interval)
   }, [isRealtime, room, roomId])
 
+  const getDeviceTypeFromFeedKey = (feedKey: string): string => {
+    const key = feedKey.toLowerCase()
+    if (key === 'v11') return 'Đèn chính'
+    if (key === 'v13') return 'Quạt'
+    if (key === 'v14') return 'Quạt (PWM)'
+    if (key === 'v15') return 'Phun sương'
+    if (key === 'v16') return 'Đèn LED đỏ'
+    if (key === 'v17') return 'Đèn LED tím'
+    return 'Thiết bị'
+  }
+
   const toggleFeed = async (feedKey: string) => {
     try {
-      const newValue = feedStates[feedKey] ? '0' : '1'
+      const isCurrentlyOn = feedStates[feedKey]
+      const newValue = isCurrentlyOn ? '0' : '1'
+      
       const response = await adafruitAPI.sendData(roomId.toString(), { feedKey, value: newValue })
       if (response.success) {
+        // Update state
         setFeedStates((prev: any) => ({
           ...prev,
           [feedKey]: !prev[feedKey],
         }))
-        // Ghi lịch sử khi bật/tắt thiết bị
-        await recordUsageHistory(roomId, feedKey)
+
+        // Handle usage history
+        if (isCurrentlyOn) {
+          // Device is being turned OFF - save usage history
+          const startTime = deviceStartTimes[feedKey]
+          if (startTime) {
+            const duration = Math.floor((new Date().getTime() - startTime.getTime()) / 1000) // seconds
+            
+            try {
+              await usageHistoryAPI.createUsageHistory({
+                room_id: roomId,
+                deviceType: getDeviceTypeFromFeedKey(feedKey),
+                duration: duration,
+                energyConsumed: 0
+              })
+            } catch (historyError) {
+              console.error('Error saving usage history:', historyError)
+            }
+
+            // Remove start time
+            setDeviceStartTimes((prev) => {
+              const newTimes = { ...prev }
+              delete newTimes[feedKey]
+              return newTimes
+            })
+          }
+        } else {
+          // Device is being turned ON - record start time
+          setDeviceStartTimes((prev) => ({
+            ...prev,
+            [feedKey]: new Date()
+          }))
+        }
       }
     } catch (error) {
       console.error(`Error toggling feed ${feedKey}:`, error)
@@ -294,21 +318,53 @@ export default function RoomDetailsPage() {
         ...prev,
         [feedKey]: !prev[feedKey],
       }))
-      // Vẫn ghi lại hành động người dùng
-      await recordUsageHistory(roomId, feedKey)
     }
   }
 
   const updateSliderFeed = async (feedKey: string, value: number) => {
     try {
+      const previousValue = feedStates[feedKey] || 0
+      
       const response = await adafruitAPI.sendData(roomId.toString(), { feedKey, value: value.toString() })
       if (response.success) {
         setFeedStates((prev: any) => ({
           ...prev,
           [feedKey]: value,
         }))
-        // Ghi lịch sử khi chỉnh slider
-        await recordUsageHistory(roomId, feedKey)
+
+        // Handle usage history for slider devices
+        if (value > 0 && previousValue === 0) {
+          // Device turned ON - record start time
+          setDeviceStartTimes((prev) => ({
+            ...prev,
+            [feedKey]: new Date()
+          }))
+        } else if (value === 0 && previousValue > 0) {
+          // Device turned OFF - save usage history
+          const startTime = deviceStartTimes[feedKey]
+          if (startTime) {
+            const duration = Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
+            
+            try {
+              await usageHistoryAPI.createUsageHistory({
+                room_id: roomId,
+                deviceType: getDeviceTypeFromFeedKey(feedKey),
+                duration: duration,
+                energyConsumed: 0
+              })
+            } catch (historyError) {
+              console.error('Error saving usage history:', historyError)
+            }
+
+            // Remove start time
+            setDeviceStartTimes((prev) => {
+              const newTimes = { ...prev }
+              delete newTimes[feedKey]
+              return newTimes
+            })
+          }
+        }
+        // If both > 0, device is still on, just changing intensity - no history action needed
       }
     } catch (error) {
       console.error(`Error updating feed ${feedKey}:`, error)

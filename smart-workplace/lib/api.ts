@@ -12,10 +12,6 @@ const apiClient = axios.create({
     },
 });
 
-// Log API base URL khi khởi tạo (chỉ ở client-side)
-if (typeof window !== "undefined") {
-    console.log("API Base URL:", `${API_BASE_URL}/api`);
-}
 
 // Request interceptor - thêm token vào header
 apiClient.interceptors.request.use(
@@ -27,8 +23,6 @@ apiClient.interceptors.request.use(
                     config.headers = new AxiosHeaders();
                 }
                 config.headers.Authorization = `Bearer ${token}`;
-            } else {
-                console.log("No token found in localStorage");
             }
         }
         return config;
@@ -67,10 +61,7 @@ export const authAPI = {
         birthday?: string;
     }) => {
         try {
-            console.log("Register API call with baseURL:", apiClient.defaults.baseURL);
-            console.log("Register API payload:", { ...userData, password: "***" });
             const response = await apiClient.post("/auth/register", userData);
-            console.log("Register API response:", response.data);
             return response.data;
         } catch (error: any) {
             console.error("Register API error:", error);
@@ -97,9 +88,7 @@ export const authAPI = {
     // Đăng nhập
     login: async (credentials: { username: string; password: string }) => {
         try {
-            console.log("Login API call with baseURL:", apiClient.defaults.baseURL);
             const response = await apiClient.post("/auth/login", credentials);
-            console.log("Login API response:", response.data);
             return response.data;
         } catch (error: any) {
             console.error("Login API error:", error.response?.data || error.message);

@@ -56,11 +56,9 @@ export default function CreateRoomPage() {
 
         // Tự động sync devices từ Adafruit IO sau khi tạo phòng thành công
         try {
-          console.log(`Syncing devices from Adafruit IO for room ${roomId}...`)
           const syncResponse = await adafruitAPI.syncDevices(roomId.toString())
           
           if (syncResponse.success) {
-            console.log(`Successfully synced ${syncResponse.data.createdDevices} devices`)
             // Redirect to room detail page để xem các devices đã sync
             router.push(`/dashboard/room/${roomId}?synced=true`)
           } else {

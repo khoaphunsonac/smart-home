@@ -74,50 +74,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const login = async (credentials: { username: string; password: string }) => {
-        console.log("AuthContext: Starting login process...");
         try {
             const raw = await authAPI.login(credentials);
-            // api.login returns response.data which is { success: true, data: { user, token } }
-            console.log("AuthContext: Raw login response:", raw);
+            const payload = raw?.data ?? raw;
 
-            // Backend returns: { success: true, data: { user, token } }
-            // So raw.data contains { user, token }
-            const payload = raw?.data ?? raw; // normalize
-            console.log("AuthContext: Normalized payload:", payload);
-
-            // Extract token and user from payload
-            // payload should be { user, token } after normalization
             const newToken =
                 payload?.data?.token ?? payload?.token ?? payload?.data?.accessToken ?? payload?.accessToken;
             const userData = payload?.data?.user ?? payload?.user;
 
-            console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
-            console.log("AuthContext: Extracted user:", userData ? userData.username : "Missing");
-
             if (!newToken || !userData) {
                 console.error("AuthContext: Invalid response structure", payload);
-                console.error("AuthContext: Full raw response:", raw);
-                throw new Error("Invalid response from server");
+                throw new Error("Invalid login response");
             }
 
-            // Save to state
-            console.log("AuthContext: Setting token and user in state...");
             setToken(newToken);
             setUser(userData);
 
-            // Save to localStorage (only on client)
             if (typeof window !== "undefined") {
                 localStorage.setItem("token", newToken);
                 localStorage.setItem("user", JSON.stringify(userData));
-                console.log("AuthContext: Saved to localStorage");
             }
-
-            console.log("AuthContext: Login completed successfully");
         } catch (error: any) {
             console.error("AuthContext: Login error:", error);
             console.error("AuthContext: Error response:", error?.response?.data ?? error?.message ?? error);
 
-            // Extract error message from different possible error formats
             let errorMessage = "Đăng nhập thất bại";
             if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
@@ -140,35 +120,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         adaUsername: string;
         adakey: string;
     }) => {
-        console.log("AuthContext: Starting register process...");
         try {
             const raw = await authAPI.register(userData);
-            console.log("AuthContext: Raw register response:", raw);
-
-            // Backend returns: { success: true, data: { user, token } }
             const payload = raw?.data ?? raw;
 
             const newToken =
                 payload?.data?.token ?? payload?.token ?? payload?.data?.accessToken ?? payload?.accessToken;
             const newUser = payload?.data?.user ?? payload?.user;
 
-            console.log("AuthContext: Extracted token:", newToken ? "Present" : "Missing");
-            console.log("AuthContext: Extracted user:", newUser ? newUser.username : "Missing");
-
             if (!newToken || !newUser) {
                 console.error("AuthContext: Invalid response structure", payload);
-                throw new Error("Invalid response from server");
+                throw new Error("Invalid register response");
             }
 
-            // Optionally set auth state after register
             setToken(newToken);
             setUser(newUser);
+
             if (typeof window !== "undefined") {
                 localStorage.setItem("token", newToken);
                 localStorage.setItem("user", JSON.stringify(newUser));
             }
-
-            console.log("AuthContext: Register completed successfully");
         } catch (error: any) {
             console.error("AuthContext: Register error:", error);
             console.error("AuthContext: Error details:", {

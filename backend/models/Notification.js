@@ -5,34 +5,30 @@ const Notification = sequelize.define('Notification', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true
-    },
-    title: {
-        type: DataTypes.STRING(100),
-        allowNull: true
+        autoIncrement: true,
+        field: 'id'
     },
     message: {
         type: DataTypes.STRING(255),
-        allowNull: false
-    },
-    type: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        defaultValue: 'info'
+        allowNull: false,
+        field: 'message'
     },
     timestamp: {
         type: DataTypes.DATE,
         allowNull: false,
-        defaultValue: DataTypes.NOW
+        defaultValue: DataTypes.NOW,
+        field: 'timestamp'
     },
     isRead: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
-        allowNull: false
+        allowNull: false,
+        field: 'IsRead'
     },
     user_id: {
         type: DataTypes.STRING(50),
         allowNull: false,
+        field: 'user_id',
         references: {
             model: 'user',
             key: 'id'
@@ -40,7 +36,8 @@ const Notification = sequelize.define('Notification', {
     }
 }, {
     tableName: 'notification',
-    timestamps: false
+    timestamps: false,
+    underscored: false
 });
 
 module.exports = Notification;

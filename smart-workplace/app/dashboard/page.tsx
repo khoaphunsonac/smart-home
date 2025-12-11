@@ -51,6 +51,17 @@ export default function DashboardPage() {
         }
     }, [user, loading, router]);
 
+    // Auto-refresh notifications every 15 seconds to show new threshold alerts
+    useEffect(() => {
+        if (!user) return;
+
+        const interval = setInterval(() => {
+            loadNotifications();
+        }, 15000); // 15 seconds
+
+        return () => clearInterval(interval);
+    }, [user]);
+
     const loadRooms = async () => {
         try {
             setLoadingRooms(true);
