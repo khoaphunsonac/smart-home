@@ -82,14 +82,26 @@ export default function DashboardPage() {
     const loadUsageHistory = async () => {
         try {
             setLoadingUsage(true);
-            const payload = await usageHistoryAPI.getUsageHistory({ limit: 10 });
+            // Gọi trực tiếp để kiểm soát cache header
+            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+            const res = await fetch(`http://localhost:5000/api/usage-history?limit=10`, {
+                cache: "no-store",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                },
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const payload = await res.json();
             const items =
                 payload?.data?.usageHistory ||
                 payload?.usageHistory ||
                 (Array.isArray(payload) ? payload : []) ||
                 [];
             setUsageHistory(Array.isArray(items) ? items : []);
-        } catch (err) {
+        } catch {
             setUsageHistory([]);
         } finally {
             setLoadingUsage(false);
@@ -236,8 +248,8 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-semibold text-foreground">Lịch sử sử dụng</h3>
                             {usageHistory.length > 3 && (
-                                <Button 
-                                    variant="ghost" 
+                                <Button
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => setExpandedUsage(!expandedUsage)}
                                     className="text-muted-foreground hover:text-foreground"
@@ -271,8 +283,8 @@ export default function DashboardPage() {
                                 ) : (
                                     <div className="divide-y divide-border">
                                         {(expandedUsage ? usageHistory : usageHistory.slice(0, 3)).map((u) => (
-                                            <div 
-                                                key={u.id} 
+                                            <div
+                                                key={u.id}
                                                 className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between"
                                             >
                                                 <div className="flex items-center space-x-3 flex-1">
@@ -323,8 +335,8 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-semibold text-foreground">Thông báo</h3>
                             {notifications.length > 3 && (
-                                <Button 
-                                    variant="ghost" 
+                                <Button
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => setExpandedNotifications(!expandedNotifications)}
                                     className="text-muted-foreground hover:text-foreground"
@@ -358,8 +370,8 @@ export default function DashboardPage() {
                                 ) : (
                                     <div className="divide-y divide-border">
                                         {(expandedNotifications ? notifications : notifications.slice(0, 3)).map((n) => (
-                                            <div 
-                                                key={n.id} 
+                                            <div
+                                                key={n.id}
                                                 className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
                                                 onClick={() => !n.isRead && markNotificationAsRead(n.id.toString())}
                                             >

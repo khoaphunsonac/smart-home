@@ -20,7 +20,7 @@ router.get('/', validatePagination, async (req, res) => {
 
         // Build filter
         const whereClause = {};
-        
+
         if (type) whereClause.type = type;
         if (room) whereClause.room_id = room;
 

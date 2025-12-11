@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  ArrowLeft, Thermometer, Droplets, Sun, Lightbulb, Wind, 
+import {
+  ArrowLeft, Thermometer, Droplets, Sun, Lightbulb, Wind,
   Settings, Activity, RefreshCw, Trash2, AlertTriangle, Beaker, Snowflake, Tv
 } from "lucide-react"
-import { roomsAPI, devicesAPI, environmentAPI, adafruitAPI } from "@/lib/api"
+import { roomsAPI, devicesAPI, environmentAPI, adafruitAPI, usageHistoryAPI } from "@/lib/api"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 export default function RoomDetailsPage() {
@@ -31,7 +31,28 @@ export default function RoomDetailsPage() {
   const [historicalData, setHistoricalData] = useState<any[]>([])
   const [isRealtime, setIsRealtime] = useState(true)
   const [loading, setLoading] = useState(false)
+  const getDeviceTypeFromFeed = (feedKey: string) => {
+    const key = feedKey.toLowerCase()
+    if (key === 'v11' || key === 'v16' || key === 'v17') return 'Light'
+    if (key === 'v13' || key === 'v14') return 'Fan'
+    if (key === 'v15') return 'Sprayer'
+    return 'Unknown'
+  }
 
+  // Ghi lịch sử sử dụng khi người dùng thao tác (button/slider)
+  const recordUsageHistory = async (roomIdParam: number, feedKey: string) => {
+    try {
+      const deviceType = getDeviceTypeFromFeed(feedKey)
+      await usageHistoryAPI.createUsageHistory({
+        room_id: roomIdParam,
+        deviceType,
+        duration: 0,
+        energyConsumed: 0
+      })
+    } catch (e) {
+      console.warn('recordUsageHistory failed:', e)
+    }
+  }
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -42,7 +63,7 @@ export default function RoomDetailsPage() {
     const loadRoomData = async () => {
       try {
         setLoading(true)
-        
+
         // Get room data
         const roomResponse = await roomsAPI.getRoom(roomId.toString())
         if (!roomResponse.success) {
@@ -62,10 +83,10 @@ export default function RoomDetailsPage() {
 
             // Initialize feed states from current feed values
             const initialStates: { [key: string]: any } = {}
-            
+
             // Get current values for control feeds
             const controlFeedKeys = ['v11', 'v13', 'v14', 'v15', 'v16', 'v17']
-            
+
             for (const feedKey of controlFeedKeys) {
               const feed = allFeeds.find((f: any) => f.key.toLowerCase() === feedKey)
               if (feed) {
@@ -98,7 +119,7 @@ export default function RoomDetailsPage() {
                 }
               }
             }
-            
+
             setFeedStates(initialStates)
           }
         } catch (feedError) {
@@ -147,17 +168,17 @@ export default function RoomDetailsPage() {
   const loadFeeds = async () => {
     setSyncing(true)
     setSyncMessage(null)
-    
+
     try {
       const feedsResponse = await adafruitAPI.getFeeds(roomId.toString())
       if (feedsResponse.success && feedsResponse.data.feeds) {
         const allFeeds = feedsResponse.data.feeds
         setFeeds(allFeeds)
-        
+
         // Reload feed states
         const initialStates: { [key: string]: any } = {}
         const controlFeedKeys = ['v11', 'v13', 'v14', 'v15', 'v16', 'v17']
-        
+
         for (const feedKey of controlFeedKeys) {
           const feed = allFeeds.find((f: any) => f.key.toLowerCase() === feedKey)
           if (feed) {
@@ -180,9 +201,9 @@ export default function RoomDetailsPage() {
             }
           }
         }
-        
+
         setFeedStates(initialStates)
-        
+
         setSyncMessage({
           type: 'success',
           text: `Đã tải thành công ${allFeeds.length} feeds từ Adafruit IO!`
@@ -203,7 +224,7 @@ export default function RoomDetailsPage() {
       })
       setTimeout(() => setSyncMessage(null), 5000)
     }
-    
+
     setSyncing(false)
   }
 
@@ -233,7 +254,7 @@ export default function RoomDetailsPage() {
         const filteredData = response.data.environmentData.filter((item: any) => {
           return new Date(item.timestamp) >= fiveMinutesAgo
         }).reverse() // Reverse to show oldest first for charts
-        
+
         setHistoricalData(filteredData)
       }
     } catch (error) {
@@ -263,6 +284,8 @@ export default function RoomDetailsPage() {
           ...prev,
           [feedKey]: !prev[feedKey],
         }))
+        // Ghi lịch sử khi bật/tắt thiết bị
+        await recordUsageHistory(roomId, feedKey)
       }
     } catch (error) {
       console.error(`Error toggling feed ${feedKey}:`, error)
@@ -271,6 +294,8 @@ export default function RoomDetailsPage() {
         ...prev,
         [feedKey]: !prev[feedKey],
       }))
+      // Vẫn ghi lại hành động người dùng
+      await recordUsageHistory(roomId, feedKey)
     }
   }
 
@@ -282,6 +307,8 @@ export default function RoomDetailsPage() {
           ...prev,
           [feedKey]: value,
         }))
+        // Ghi lịch sử khi chỉnh slider
+        await recordUsageHistory(roomId, feedKey)
       }
     } catch (error) {
       console.error(`Error updating feed ${feedKey}:`, error)
@@ -299,7 +326,7 @@ export default function RoomDetailsPage() {
       if (key.includes('v11') || key.includes('v16') || key.includes('v17') || key.includes('v18') || key.includes('v19')) return <Lightbulb className="w-5 h-5" />
       if (key.includes('v12') || key.includes('fan') || key.includes('quat')) return <Wind className="w-5 h-5" />
     }
-    
+
     // Fallback to type
     switch (type.toLowerCase()) {
       case "sensor":
@@ -453,35 +480,35 @@ export default function RoomDetailsPage() {
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={historicalData}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                      <XAxis 
-                        dataKey="timestamp" 
-                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                      <XAxis
+                        dataKey="timestamp"
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                       />
-                      <YAxis 
+                      <YAxis
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                         domain={['dataMin - 2', 'dataMax + 2']}
                       />
-                      <Tooltip 
+                      <Tooltip
                         labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
                           border: 'none',
                           borderRadius: '8px',
                           color: '#fff'
                         }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="temperature" 
-                        stroke="#ef4444" 
+                      <Line
+                        type="monotone"
+                        dataKey="temperature"
+                        stroke="#ef4444"
                         strokeWidth={2}
                         dot={{ fill: '#ef4444', r: 3 }}
                         activeDot={{ r: 5 }}
@@ -503,35 +530,35 @@ export default function RoomDetailsPage() {
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={historicalData}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                      <XAxis 
-                        dataKey="timestamp" 
-                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                      <XAxis
+                        dataKey="timestamp"
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                       />
-                      <YAxis 
+                      <YAxis
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                         domain={[0, 100]}
                       />
-                      <Tooltip 
+                      <Tooltip
                         labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
                           border: 'none',
                           borderRadius: '8px',
                           color: '#fff'
                         }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="humidity" 
-                        stroke="#3b82f6" 
+                      <Line
+                        type="monotone"
+                        dataKey="humidity"
+                        stroke="#3b82f6"
                         strokeWidth={2}
                         dot={{ fill: '#3b82f6', r: 3 }}
                         activeDot={{ r: 5 }}
@@ -553,35 +580,35 @@ export default function RoomDetailsPage() {
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={historicalData}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                      <XAxis 
-                        dataKey="timestamp" 
-                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                      <XAxis
+                        dataKey="timestamp"
+                        tickFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN", {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                       />
-                      <YAxis 
+                      <YAxis
                         tick={{ fontSize: 10 }}
                         stroke="currentColor"
                         opacity={0.5}
                         domain={['dataMin - 5', 'dataMax + 5']}
                       />
-                      <Tooltip 
+                      <Tooltip
                         labelFormatter={(time) => new Date(time).toLocaleTimeString("vi-VN")}
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
                           border: 'none',
                           borderRadius: '8px',
                           color: '#fff'
                         }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="lightLevel" 
-                        stroke="#eab308" 
+                      <Line
+                        type="monotone"
+                        dataKey="lightLevel"
+                        stroke="#eab308"
                         strokeWidth={2}
                         dot={{ fill: '#eab308', r: 3 }}
                         activeDot={{ r: 5 }}
@@ -599,8 +626,8 @@ export default function RoomDetailsPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">Điều khiển thiết bị</h2>
             <div className="flex items-center gap-2">
-              <Button 
-                onClick={loadFeeds} 
+              <Button
+                onClick={loadFeeds}
                 disabled={syncing}
                 variant="outline"
                 className="flex items-center gap-2"
@@ -610,7 +637,7 @@ export default function RoomDetailsPage() {
               </Button>
             </div>
           </div>
-          
+
           {loading ? (
             <Card className="bg-card border-border">
               <CardContent className="flex flex-col items-center justify-center py-12">
@@ -626,8 +653,8 @@ export default function RoomDetailsPage() {
                 <p className="text-muted-foreground text-center mb-4">
                   Phòng này chưa có feeds nào từ Adafruit IO.
                 </p>
-                <Button 
-                  onClick={loadFeeds} 
+                <Button
+                  onClick={loadFeeds}
                   disabled={syncing}
                   className="flex items-center gap-2"
                 >
@@ -675,7 +702,7 @@ export default function RoomDetailsPage() {
                   </CardContent>
                 </Card>
               ))}
-              
+
               {/* Toggle Control Feeds (v11, v13, v16, v17) */}
               {feeds.filter((feed: any) => ['v11', 'v13', 'v16', 'v17'].includes(feed.key.toLowerCase())).map((feed: any) => (
                 <Card key={feed.id} className="bg-card border-border">
@@ -695,9 +722,9 @@ export default function RoomDetailsPage() {
                           <CardDescription>{feed.key}</CardDescription>
                         </div>
                       </div>
-                      <Switch 
-                        checked={feedStates[feed.key.toLowerCase()] || false} 
-                        onCheckedChange={() => toggleFeed(feed.key.toLowerCase())} 
+                      <Switch
+                        checked={feedStates[feed.key.toLowerCase()] || false}
+                        onCheckedChange={() => toggleFeed(feed.key.toLowerCase())}
                       />
                     </div>
                   </CardHeader>
@@ -719,7 +746,7 @@ export default function RoomDetailsPage() {
                   </CardContent>
                 </Card>
               ))}
-              
+
               {/* Slider Control Feeds (v14, v15) */}
               {feeds.filter((feed: any) => ['v14', 'v15'].includes(feed.key.toLowerCase())).map((feed: any) => (
                 <Card key={feed.id} className="bg-card border-border">
@@ -749,13 +776,13 @@ export default function RoomDetailsPage() {
                         </span>
                       </div>
                       <div className="space-y-2">
-                        <Slider 
-                          value={[feedStates[feed.key.toLowerCase()] || 0]} 
+                        <Slider
+                          value={[feedStates[feed.key.toLowerCase()] || 0]}
                           onValueChange={(value) => updateSliderFeed(feed.key.toLowerCase(), value[0])}
-                          min={0} 
-                          max={100} 
-                          step={10} 
-                          className="w-full" 
+                          min={0}
+                          max={100}
+                          step={10}
+                          className="w-full"
                         />
                         <p className="text-xs text-muted-foreground">
                           {feed.key.toLowerCase() === 'v14' ? 'Tốc độ quạt (0-100%)' : 'Cường độ phun sương (0-100%)'}
@@ -779,9 +806,9 @@ export default function RoomDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Adafruit Username:</span>
-                  <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
-                </div><div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Adafruit Username:</span>
+                <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
+              </div><div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">API Key:</span>
                   <span className="font-mono text-card-foreground">
                     {room.adakey ? `${room.adakey.substring(0, 8)}***` : 'Chưa cấu hình'}

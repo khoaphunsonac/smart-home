@@ -127,10 +127,10 @@ router.post('/', async (req, res) => {
     try {
         const { room_id, deviceType, duration, energyConsumed } = req.body;
 
-        if (!room_id || !deviceType || !duration) {
+        if (!room_id || !deviceType) {
             return res.status(400).json({
                 success: false,
-                message: 'Room ID, device type, and duration are required'
+                message: 'Room ID and device type are required'
             });
         }
 
@@ -153,8 +153,8 @@ router.post('/', async (req, res) => {
             room_id,
             user_id: req.user.id,
             deviceType,
-            duration,
-            energyConsumed: energyConsumed || 0,
+            duration: typeof duration === 'number' ? duration : 0,
+            energyConsumed: typeof energyConsumed === 'number' ? energyConsumed : 0,
             usageDate: new Date()
         });
 
