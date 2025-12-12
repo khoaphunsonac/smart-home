@@ -140,11 +140,11 @@ router.post("/:roomId", validateRoomId, async (req, res) => {
             }
         }
 
-        // Độ ẩm < 80%
-        if (humidity !== null && humidity !== undefined && humidity < 80) {
+        // Độ ẩm < 50%
+        if (humidity !== null && humidity !== undefined && humidity < 50) {
             try {
                 const notification = await Notification.create({
-                    message: `Độ ẩm trong ${room.name} thấp bất thường: ${humidity.toFixed(1)}% (ngưỡng an toàn: ≥ 80%)`,
+                    message: `Độ ẩm trong ${room.name} thấp bất thường: ${humidity.toFixed(1)}% (ngưỡng an toàn: ≥ 50%)`,
                     user_id: req.user.id,
                     timestamp: new Date(),
                     isRead: false

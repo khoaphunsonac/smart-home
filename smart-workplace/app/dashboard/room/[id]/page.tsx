@@ -257,7 +257,7 @@ export default function RoomDetailsPage() {
   const getDeviceTypeFromFeedKey = (feedKey: string): string => {
     const key = feedKey.toLowerCase()
     if (key === 'v11') return 'Đèn chính'
-    if (key === 'v13') return 'Quạt'
+    if (key === 'v13') return 'Auto mode'
     if (key === 'v14') return 'Quạt (PWM)'
     if (key === 'v15') return 'Phun sương'
     if (key === 'v16') return 'Đèn LED đỏ'
@@ -759,8 +759,52 @@ export default function RoomDetailsPage() {
                 </Card>
               ))}
 
-              {/* Toggle Control Feeds (v11, v13, v16, v17) */}
-              {feeds.filter((feed: any) => ['v11', 'v13', 'v16', 'v17'].includes(feed.key.toLowerCase())).map((feed: any) => (
+              {/* Auto Mode Control (v13) */}
+              {feeds.filter((feed: any) => feed.key.toLowerCase() === 'v13').map((feed: any) => (
+                <Card key={feed.id} className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30 border-2">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`p-3 rounded-lg ${feedStates[feed.key.toLowerCase()] ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground"}`}
+                        >
+                          <Settings className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-card-foreground text-xl">AUTO MODE</CardTitle>
+                          <CardDescription>Điều khiển tự động thông minh</CardDescription>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={feedStates[feed.key.toLowerCase()] || false}
+                        onCheckedChange={() => toggleFeed(feed.key.toLowerCase())}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Trạng thái:</span>
+                        <Badge 
+                          variant={feedStates[feed.key.toLowerCase()] ? "default" : "secondary"}
+                          className={feedStates[feed.key.toLowerCase()] ? "bg-blue-500" : ""}
+                        >
+                          {feedStates[feed.key.toLowerCase()] ? "Đang hoạt động" : "Tắt"}
+                        </Badge>
+                      </div>
+                      {/* <Alert className="bg-blue-500/5 border-blue-500/20">
+                        <Activity className="h-4 w-4 text-blue-500" />
+                        <AlertDescription className="text-xs">
+                          Hệ thống tự động điều chỉnh nhiệt độ, độ ẩm và ánh sáng dựa trên điều kiện môi trường
+                        </AlertDescription>
+                      </Alert> */}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Toggle Control Feeds (v11, v16, v17) */}
+              {feeds.filter((feed: any) => ['v11', 'v16', 'v17'].includes(feed.key.toLowerCase())).map((feed: any) => (
                 <Card key={feed.id} className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -769,7 +813,6 @@ export default function RoomDetailsPage() {
                           className={`p-2 rounded-lg ${feedStates[feed.key.toLowerCase()] ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
                         >
                           {feed.key.toLowerCase() === 'v11' && <Lightbulb className="w-5 h-5" />}
-                          {feed.key.toLowerCase() === 'v13' && <Wind className="w-5 h-5" />}
                           {feed.key.toLowerCase() === 'v16' && <Lightbulb className="w-5 h-5" />}
                           {feed.key.toLowerCase() === 'v17' && <Lightbulb className="w-5 h-5" />}
                         </div>
@@ -794,7 +837,6 @@ export default function RoomDetailsPage() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {feed.key.toLowerCase() === 'v11' && 'Đèn chính'}
-                        {feed.key.toLowerCase() === 'v13' && 'Quạt thông gió'}
                         {feed.key.toLowerCase() === 'v16' && 'Đèn LED đỏ'}
                         {feed.key.toLowerCase() === 'v17' && 'Đèn LED tím'}
                       </p>
@@ -863,11 +905,11 @@ export default function RoomDetailsPage() {
             <CardContent>
               <div className="space-y-4">                <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Adafruit Username:</span>
-                <span className="font-mono text-card-foreground">{room.adaUsername || 'Chưa cấu hình'}</span>
+                <span className="font-mono text-card-foreground">{room.owner?.adaUsername || 'Chưa cấu hình'}</span>
               </div><div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">API Key:</span>
                   <span className="font-mono text-card-foreground">
-                    {room.adakey ? `${room.adakey.substring(0, 8)}***` : 'Chưa cấu hình'}
+                    {room.owner?.adakey ? `${room.owner.adakey.substring(0, 8)}***` : 'Chưa cấu hình'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
