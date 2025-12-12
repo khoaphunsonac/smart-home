@@ -51,17 +51,6 @@ export default function DashboardPage() {
         }
     }, [user, loading, router]);
 
-    // Auto-refresh notifications every 15 seconds to show new threshold alerts
-    useEffect(() => {
-        if (!user) return;
-
-        const interval = setInterval(() => {
-            loadNotifications();
-        }, 15000); // 15 seconds
-
-        return () => clearInterval(interval);
-    }, [user]);
-
     const loadRooms = async () => {
         try {
             setLoadingRooms(true);
@@ -136,12 +125,30 @@ export default function DashboardPage() {
         }
     };
 
-    const markNotificationAsRead = async (id: string) => {
+    const extractRoomNameFromMessage = (message: string): string | null => {
+        const match = message.match(/trong\s+(.+?)\s+(cao|thấp|đang)/);
+        return match ? match[1].trim() : null;
+    };
+
+    const findRoomIdByName = (roomName: string): string | null => {
+        const room = userRooms.find(r => r.name === roomName);
+        return room ? room.id : null;
+    };
+
+    const markNotificationAsRead = async (id: string, message: string) => {
         try {
             await notificationsAPI.markAsRead(id);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+            
+            const roomName = extractRoomNameFromMessage(message);
+            if (roomName) {
+                const roomId = findRoomIdByName(roomName);
+                if (roomId) {
+                    router.push(`/dashboard/room/${roomId}`);
+                }
+            }
         } catch (err) {
-            // Handle error silently
+            console.error('Failed to mark notification as read:', err);
         }
     };
 
@@ -384,7 +391,7 @@ export default function DashboardPage() {
                                             <div
                                                 key={n.id}
                                                 className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
-                                                onClick={() => !n.isRead && markNotificationAsRead(n.id.toString())}
+                                                onClick={() => markNotificationAsRead(n.id.toString(), n.message)}
                                             >
                                                 <div className="flex items-start space-x-3">
                                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${!n.isRead ? 'bg-primary/10' : 'bg-muted'}`}>
